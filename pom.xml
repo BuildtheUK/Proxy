@@ -21,7 +21,7 @@
         <maven.compiler.release>${java-version}</maven.compiler.release>
 
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-shade-plugin.version>3.5.0</maven-shade-plugin.version>
+        <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
         <networklib.version>a781b6371c</networklib.version>
 
@@ -73,17 +73,6 @@
             </dependency>
 
             <!-- External dependencies -->
-            <dependency>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>${maven.shade.plugin}</version>
-            </dependency>
-
             <dependency>
                 <groupId>com.velocitypowered</groupId>
                 <artifactId>velocity-api</artifactId>
@@ -141,21 +130,4 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

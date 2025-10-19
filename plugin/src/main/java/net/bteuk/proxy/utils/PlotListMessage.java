@@ -3,9 +3,10 @@ package net.bteuk.proxy.utils;
 import net.bteuk.proxy.Discord;
 import net.bteuk.proxy.Proxy;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.utils.messages.MessageRequest;
+import net.dv8tion.jda.api.components.buttons.Button;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -93,9 +94,8 @@ public class PlotListMessage {
 
         //Add the buttons to the reply.
         if (!components.isEmpty()) {
-            message.setActionRow(components);
+            message.setComponents(ActionRow.of(components));
         }
-
     }
 
     /**

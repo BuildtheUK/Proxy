@@ -26,10 +26,28 @@ public class DatabaseInit {
 
         HikariConfig cfg = new HikariConfig();
 
-        cfg.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database + "?rewriteBatchedStatements=true" + "&allowPublicKeyRetrieval=true" + "&useSSL=false" + "&cachePrepStmts=true" + "&prepStmtCacheSize=256" + "&prepStmtCacheSqlLimit=2048" + "&connectTimeout=10000" + "&socketTimeout=30000" + "&connectionTimeZone=UTC");
+        cfg.setDataSourceClassName("com.mysql.cj.jdbc.MysqlDataSource");
 
-        cfg.setUsername(username);
-        cfg.setPassword(password);
+        Properties dsProps = new Properties();
+        dsProps.setProperty("serverName", host);
+        dsProps.setProperty("portNumber", String.valueOf(port));
+        dsProps.setProperty("databaseName", database);
+        dsProps.setProperty("user", username);
+        dsProps.setProperty("password", password);
+
+        dsProps.setProperty("rewriteBatchedStatements", "true");
+        dsProps.setProperty("allowPublicKeyRetrieval", "true");
+        dsProps.setProperty("useSSL", "false");
+        dsProps.setProperty("cachePrepStmts", "true");
+        dsProps.setProperty("prepStmtCacheSize", "256");
+        dsProps.setProperty("prepStmtCacheSqlLimit", "2048");
+        dsProps.setProperty("connectTimeout", "10000");
+        dsProps.setProperty("socketTimeout", "30000");
+        dsProps.setProperty("serverTimezone", "UTC");
+
+        dsProps.setProperty("characterEncoding", "utf8");
+
+        cfg.setDataSourceProperties(dsProps);
 
         cfg.setMaximumPoolSize(20);
         cfg.setMinimumIdle(2);
@@ -38,11 +56,6 @@ public class DatabaseInit {
         cfg.setMaxLifetime(1800000);
         cfg.setKeepaliveTime(300000);
         cfg.setPoolName("ProxyHikariPool");
-
-        Properties dsProps = new Properties();
-        dsProps.setProperty("useUnicode", "true");
-        dsProps.setProperty("characterEncoding", "utf8");
-        cfg.setDataSourceProperties(dsProps);
 
         return new HikariDataSource(cfg);
     }
