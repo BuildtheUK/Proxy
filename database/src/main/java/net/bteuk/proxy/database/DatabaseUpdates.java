@@ -95,11 +95,21 @@ public class DatabaseUpdates {
         if (oldVersionInt <= 10) {
             update10_11();
         }
+
+        // 1.7.3 -> 1.9.4
+        if (oldVersionInt <= 11) {
+            update12_11();
+        }
     }
 
     private int getVersionInt(String version) {
 
         switch (version) {
+
+            // 1.9.4 = 12
+            case "1.9.4" -> {
+                return 12;
+            }
 
             // 1.7.3 = 11
             case "1.7.3" -> {
@@ -160,6 +170,16 @@ public class DatabaseUpdates {
 
     }
 
+    private void update12_11() {
+        log.info("Updating database from 1.7.3 to 1.9.4");
+
+        // Remove the type column from server_events and join_events.
+        globalSQL.update("ALTER TABLE server_events DROP COLUMN type;");
+        globalSQL.update("ALTER TABLE join_events DROP COLUMN type;");
+
+        globalSQL.update("UPDATE unique_data SET data_value='1.9.4' WHERE data_key='version';");
+    }
+
     private void update10_11() {
         log.info("Updating database from 1.7.2 to 1.7.3");
 
@@ -193,7 +213,7 @@ public class DatabaseUpdates {
             log.info("Migrated all plot corners to Earth location.");
         }
 
-        // Version 1.7.2
+        // Version 1.7.3
         globalSQL.update("UPDATE unique_data SET data_value='1.7.3' WHERE data_key='version';");
     }
 

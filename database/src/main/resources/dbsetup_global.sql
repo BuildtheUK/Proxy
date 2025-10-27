@@ -56,8 +56,6 @@ CREATE TABLE IF NOT EXISTS messages
 CREATE TABLE IF NOT EXISTS join_events
 (
     uuid        CHAR(36)        NOT NULL,
-    type        ENUM('plotsystem',
-                'network')      NOT NULL,
     event       VARCHAR(256)    NOT NULL,
     message     VARCHAR(256)    NULL DEFAULT NULL,
     PRIMARY KEY(uuid),
@@ -67,8 +65,6 @@ CREATE TABLE IF NOT EXISTS join_events
 CREATE TABLE IF NOT EXISTS server_events
 (
     uuid        CHAR(36)        NULL DEFAULT NULL,
-    type        ENUM('plotsystem',
-                'network')      NOT NULL,
     server      VARCHAR(64)     NOT NULL,
     event       VARCHAR(256)    NOT NULL,
     message     VARCHAR(256)    NULL DEFAULT NULL,
