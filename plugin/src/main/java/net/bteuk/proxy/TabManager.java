@@ -268,23 +268,26 @@ public class TabManager {
             }
             if (userToAdd.isAfk()) {
                 statusStyle.decorate(TextDecoration.ITALIC);
+                statusStyle.color(NamedTextColor.WHITE);
             }
             if (userToAdd.isFocusEnabled()) {
                 statusStyle.decorate(TextDecoration.STRIKETHROUGH);
+                statusStyle.color(NamedTextColor.WHITE);
             }
         }
 
         Component name = user.getDisplayName();
-        if (tabPlayer.getPrefix() != null) {
-            name = tabPlayer.getPrefix()
-                    .append(Component.space())
-                    .append(name);
-        }
-
         // Apply the status overlay to the entire tree if exists.
         Style style = statusStyle.build();
         if (!style.isEmpty()) {
             name = applyStyleToTree(name, style);
+        }
+
+        // Add the prefix.
+        if (tabPlayer.getPrefix() != null) {
+            name = tabPlayer.getPrefix()
+                    .append(Component.space())
+                    .append(name);
         }
 
         return name;

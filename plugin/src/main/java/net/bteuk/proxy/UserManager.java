@@ -373,8 +373,8 @@ public class UserManager {
             Proxy.getInstance().getTabManager().updatePlayer(update.getTabPlayer());
         }
 
-        if (!Objects.equals(user.getDisplayName(), update.getDisplayName())) {
-            user.updateDisplayName(update.getDisplayName());
+        if (update.getDisplayName() != null && user.updateDisplayName(update.getDisplayName())) {
+            Proxy.getInstance().getChatHandler().handle(update);
         }
     }
 

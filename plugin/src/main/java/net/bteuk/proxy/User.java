@@ -17,6 +17,7 @@ import net.bteuk.proxy.utils.Analytics;
 import net.bteuk.proxy.utils.SwitchServer;
 import net.bteuk.proxy.utils.Time;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -143,14 +144,17 @@ public class User {
         }
     }
 
-    public void updateDisplayName(Component newDisplayName) {
+    public boolean updateDisplayName(Component newDisplayName) {
         // Assert whether the display name is valid.
         if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
             Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
-            return;
+            return false;
         }
         // Strip any formatting.
-        stripDecorations(newDisplayName);
+        newDisplayName = stripDecorations(newDisplayName);
+
+        // If there is no colour, explicitly set it to white.
+        newDisplayName = newDisplayName.colorIfAbsent(NamedTextColor.WHITE);
 
         String displayName = GsonComponentSerializer.gson().serialize(newDisplayName);
         globalSQL.update("UPDATE player_data SET display_name='" + displayName + "' WHERE uuid='" + uuid + "';");
@@ -158,7 +162,8 @@ public class User {
 
         // Update TAB.
         Proxy.getInstance().getTabManager().updatePlayerByUuid(uuid);
-        Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Updated nickname to ").append(newDisplayName), false));
+        Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Set nickname to ").append(newDisplayName), false));
+        return true;
     }
 
     /**
