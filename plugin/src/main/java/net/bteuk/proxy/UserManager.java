@@ -2,6 +2,7 @@ package net.bteuk.proxy;
 
 import com.velocitypowered.api.proxy.ProxyServer;
 import lombok.Getter;
+import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.ChatMessage;
 import net.bteuk.network.lib.dto.DirectMessage;
 import net.bteuk.network.lib.dto.FocusEvent;
@@ -23,15 +24,13 @@ import net.bteuk.proxy.eventing.listeners.ServerConnectListener;
 import net.bteuk.proxy.exceptions.ErrorMessage;
 import net.bteuk.proxy.exceptions.ServerNotFoundException;
 import net.bteuk.proxy.utils.SwitchServer;
+import net.bteuk.proxy.utils.Time;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 
 import static net.bteuk.network.lib.enums.ChatChannels.GLOBAL;
 import static net.bteuk.proxy.utils.Analytics.logPlayerCount;
@@ -45,6 +44,7 @@ import static net.bteuk.proxy.utils.Constants.WELCOME_MESSAGE;
  * Class to manage the users on the network.
  */
 @Getter
+@Log
 public class UserManager {
 
     private final ProxyServer server;
@@ -56,6 +56,7 @@ public class UserManager {
 
     public UserManager(ProxyServer server) {
         this.server = server;
+        initOnlineTracker();
     }
 
     public void handleUserConnect(UserConnectRequest request) {
@@ -131,7 +132,7 @@ public class UserManager {
         if (user != null) {
             updateUser(user, userUpdate);
         } else {
-            Proxy.getInstance().getLogger().warn(String.format("Update event for %s was received, but no User exists by that uuid.", userUpdate.getUuid()));
+            Proxy.getInstance().getLogger().warn("Update event for {} was received, but no User exists by that uuid.", userUpdate.getUuid());
         }
     }
 
@@ -371,6 +372,10 @@ public class UserManager {
             Proxy.getInstance().getChatHandler().handle(update);
             Proxy.getInstance().getTabManager().updatePlayer(update.getTabPlayer());
         }
+
+        if (!Objects.equals(user.getDisplayName(), update.getDisplayName())) {
+            user.updateDisplayName(update.getDisplayName());
+        }
     }
 
     /**
@@ -422,6 +427,32 @@ public class UserManager {
                         }
                 )
         );
+    }
+
+    private void initOnlineTracker() {
+        Proxy.getInstance().getServer().getScheduler().buildTask(Proxy.getInstance(), () -> {
+                    Proxy.getInstance().getServer().getAllPlayers().forEach(player -> {
+
+                        // Update the last ping of the user.
+                        User user = getUserByUuid(player.getUniqueId().toString());
+                        if (user == null) {
+                            log.warning(String.format("Player %s is on the server but is not tracked, maybe they just logged in?", player.getUsername()));
+                        } else {
+                            user.setLastPing(Time.currentTime());
+                        }
+                    });
+
+                    // If any user has not been pinged for 5 minutes, remove them.
+                    // Only do this for users that the server thinks are still online, offline users will be removed automatically after 5 minutes.
+                    users.forEach(user -> {
+                        long time = Time.currentTime();
+                        if (time - user.getLastPing() > 5 * 60 * 1000L && user.isOnline()) {
+                            log.warning("Player " + user.getName() + " has not been pinged for 5 minutes, removing them from the proxy.");
+                            removeUser(user, false);
+                        }
+                    });
+                })
+                .repeat(Duration.ofMinutes(1L)).schedule();
     }
 
     /**

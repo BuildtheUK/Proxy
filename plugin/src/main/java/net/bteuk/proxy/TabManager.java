@@ -10,6 +10,7 @@ import net.bteuk.network.lib.dto.TabPlayer;
 import net.bteuk.network.lib.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.ArrayList;
@@ -256,27 +257,34 @@ public class TabManager {
         // Find the user.
         User userToAdd = Proxy.getInstance().getUserManager().getUserByUuid(tabPlayer.getUuid());
 
-        Component name = ChatUtils.line(tabPlayer.getName());
+        // Optional style that will overwrite any custom style.
+        Style.Builder statusStyle = Style.style();
 
         if (userToAdd != null) {
             if (userToAdd.isMuted()) {
-                name = name.color(NamedTextColor.DARK_RED);
+                statusStyle.color(NamedTextColor.DARK_RED);
             } else if (user.isMuted(userToAdd)) {
-                name = name.color(NamedTextColor.RED);
+                statusStyle.color(NamedTextColor.RED);
             }
             if (userToAdd.isAfk()) {
-                name = name.decorate(TextDecoration.ITALIC);
+                statusStyle.decorate(TextDecoration.ITALIC);
             }
             if (userToAdd.isFocusEnabled()) {
-                name = name.decorate(TextDecoration.STRIKETHROUGH);
+                statusStyle.decorate(TextDecoration.STRIKETHROUGH);
             }
         }
 
-        // Add the prefix.
+        Component name = user.getDisplayName();
         if (tabPlayer.getPrefix() != null) {
             name = tabPlayer.getPrefix()
                     .append(Component.space())
                     .append(name);
+        }
+
+        // Apply the status overlay to the entire tree if exists.
+        Style style = statusStyle.build();
+        if (!style.isEmpty()) {
+            name = applyStyleToTree(name, style);
         }
 
         return name;
@@ -288,5 +296,22 @@ public class TabManager {
 
     private void updateDisplayName(Player player, String name, Component displayName) {
         player.getTabList().getEntries().stream().filter(tabListEntry -> tabListEntry.getProfile().getName().equalsIgnoreCase(name) && tabListEntry.isListed()).findFirst().ifPresent(tabListEntry -> tabListEntry.setDisplayName(displayName));
+    }
+
+    /**
+     * Recursively applies the given style to every node in the component tree,
+     * overriding child styles to ensure uniform propagation.
+     */
+    private static Component applyStyleToTree(Component component, Style styleToApply) {
+        Component updated = component.style(styleToApply);
+
+        if (!component.children().isEmpty()) {
+            List<Component> updatedChildren = component.children().stream()
+                    .map(child -> applyStyleToTree(child, styleToApply))
+                    .toList();
+            updated = updated.children(updatedChildren);
+        }
+
+        return updated;
     }
 }

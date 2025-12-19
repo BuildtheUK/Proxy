@@ -23,7 +23,7 @@
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
-        <networklib.version>a781b6371c</networklib.version>
+        <networklib.version>b6798dd78a</networklib.version>
 
         <velocity.version>3.4.0-SNAPSHOT</velocity.version>
 

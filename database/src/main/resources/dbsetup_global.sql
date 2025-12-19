@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS player_data
     previous_coordinate INT     NOT NULL DEFAULT 0,
     player_skin     TEXT    NULL DEFAULT NULL,
     tips_enabled    TINYINT(1)  NOT NULL DEFAULT 1,
+    display_name    TEXT    NULL DEFAULT NULL,
     PRIMARY KEY (uuid)
 );
 

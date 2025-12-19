@@ -177,6 +177,8 @@ public class DatabaseUpdates {
         globalSQL.update("ALTER TABLE server_events DROP COLUMN type;");
         globalSQL.update("ALTER TABLE join_events DROP COLUMN type;");
 
+        globalSQL.update("ALTER TABLE player_data ADD COLUMN display_name TEXT NULL DEFAULT NULL;");
+
         globalSQL.update("UPDATE unique_data SET data_value='1.9.4' WHERE data_key='version';");
     }
 

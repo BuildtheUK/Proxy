@@ -7,14 +7,20 @@ import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.velocitypowered.api.scheduler.TaskStatus;
 import lombok.Getter;
 import lombok.Setter;
+import net.bteuk.network.lib.dto.DirectMessage;
 import net.bteuk.network.lib.dto.UserConnectReply;
 import net.bteuk.network.lib.dto.UserConnectRequest;
+import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.utils.ChatUtils;
 import net.bteuk.proxy.database.sql.GlobalSQL;
 import net.bteuk.proxy.utils.Analytics;
 import net.bteuk.proxy.utils.SwitchServer;
 import net.bteuk.proxy.utils.Time;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -49,6 +55,9 @@ public class User {
 
     @Getter
     private final String name;
+
+    @Getter
+    private Component displayName;
 
     @Getter
     private final String playerSkin;
@@ -101,10 +110,14 @@ public class User {
     @Setter
     private int previousPlotVerificationCount = 0;
 
-    //used to store the id of the last user a player messaged or was messaged by.
+    // Used to store the id of the last user a player messaged or was messaged by.
     @Getter
     @Setter
     private String lastMessagedUserID = null;
+
+    @Getter
+    @Setter
+    private long lastPing;
 
     public User(UserConnectRequest request) {
         this.uuid = request.getUuid();
@@ -113,6 +126,37 @@ public class User {
         this.channels.addAll(request.getChannels());
 
         this.globalSQL = Proxy.getInstance().getGlobalSQL();
+
+        this.lastPing = Time.currentTime();
+
+        setDisplayName();
+    }
+
+    public void setDisplayName() {
+        String displayName = globalSQL.getString("SELECT display_name FROM player_data WHERE uuid='" + uuid + "';");
+        if (displayName != null) {
+            this.displayName = GsonComponentSerializer.gson().deserialize(displayName);
+        } else {
+            this.displayName = Component.text(this.name);
+        }
+    }
+
+    public void updateDisplayName(Component newDisplayName) {
+        // Assert whether the display name is valid.
+        if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
+            Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
+            return;
+        }
+        // Strip any formatting.
+        stripDecorations(newDisplayName);
+
+        String displayName = GsonComponentSerializer.gson().serialize(newDisplayName);
+        globalSQL.update("UPDATE player_data SET display_name='" + displayName + "' WHERE uuid='" + uuid + "';");
+        this.displayName = newDisplayName;
+
+        // Update TAB.
+        Proxy.getInstance().getTabManager().updatePlayerByUuid(uuid);
+        Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Updated nickname to ").append(newDisplayName), false));
     }
 
     /**
@@ -342,5 +386,31 @@ public class User {
 
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readTree(inline.toString());
+    }
+
+    /**
+     * Recursively strips all text decorations (bold, italic, etc.) from the component tree,
+     * preserving colors and inheritance.
+     */
+    private static Component stripDecorations(Component component) {
+        Style cleanStyle = component.style().toBuilder()
+                .decoration(TextDecoration.BOLD, TextDecoration.State.NOT_SET)
+                .decoration(TextDecoration.ITALIC, TextDecoration.State.NOT_SET)
+                .decoration(TextDecoration.UNDERLINED, TextDecoration.State.NOT_SET)
+                .decoration(TextDecoration.STRIKETHROUGH, TextDecoration.State.NOT_SET)
+                .decoration(TextDecoration.OBFUSCATED, TextDecoration.State.NOT_SET)
+                .build();
+
+        Component cleaned = component.style(cleanStyle);
+
+        // Recurse on children, letting inheritance apply parent's clean style.
+        if (!component.children().isEmpty()) {
+            List<Component> cleanChildren = component.children().stream()
+                    .map(User::stripDecorations)
+                    .toList();
+            cleaned = cleaned.children(cleanChildren);
+        }
+
+        return cleaned;
     }
 }
