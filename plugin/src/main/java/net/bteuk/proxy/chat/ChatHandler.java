@@ -58,10 +58,10 @@ public class ChatHandler {
         instance.getServerManager().getServers().forEach(server -> {
             OutputSocket socket = sockets.get(server.getName());
             if (socket == null) {
-                instance.getLogger().error(String.format("Server %s exists but no Socket has been configured.", server.getName()));
+                instance.getLogger().error("Server {} exists but no Socket has been configured.", server.getName());
             } else {
                 if (!socket.sendSocketMessage(message)) {
-                    instance.getLogger().warn(String.format("Unable to send %s to server %s, it is probably offline.", message.getClass().getTypeName(), server.getName()));
+                    instance.getLogger().warn("Unable to send {} to server {}, it is probably offline.", message.getClass().getTypeName(), server.getName());
                 }
             }
         });
@@ -75,7 +75,7 @@ public class ChatHandler {
                 throw new ServerNotFoundException(serverName);
             } else {
                 if (!socket.sendSocketMessage(message)) {
-                    instance.getLogger().warn(String.format("Unable to send %s to server %s, it is probably offline.", message.getClass().getTypeName(), optionalServer.get().getName()));
+                    instance.getLogger().warn("Unable to send {} to server {}, it is probably offline.", message.getClass().getTypeName(), optionalServer.get().getName());
                 }
             }
         } else {

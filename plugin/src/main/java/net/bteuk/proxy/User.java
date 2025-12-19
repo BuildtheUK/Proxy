@@ -25,6 +25,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -246,14 +248,15 @@ public class User {
         // TODO: Add a potential join event.
 
         return new UserConnectReply(
-                uuid,
+                this.uuid,
                 isNavigatorEnabled(),
                 isTeleportEnabled(),
                 isNightvisionEnabled(),
                 getChatChannel(),
                 isTipsEnabled(),
                 getOfflineMessages(),
-                focusEnabled
+                this.focusEnabled,
+                this.displayName
         );
     }
 
@@ -310,7 +313,7 @@ public class User {
     public void setName(String name) {
         // Check if the name is not in use with another user, else correct that.
         String uuidForName = globalSQL.getString("SELECT uuid FROM player_data WHERE name='" + name + "';");
-        if (uuidForName != null && !StringUtils.equals(uuid, uuidForName)) {
+        if (uuidForName != null && !uuid.equals(uuidForName)) {
             // Another user has this username, fix that.
             // Update the new name asynchronously.
             updateNameAsync(uuidForName);
@@ -346,7 +349,7 @@ public class User {
         Proxy.getInstance().getServer().getScheduler().buildTask(Proxy.getInstance(), () -> {
             String stringUrl = "https://sessionserver.mojang.com/session/minecraft/profile/"+uuid.replace("-", "");
             try {
-                URL url = new URL(stringUrl);
+                URL url = new URI(stringUrl).toURL();
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.connect();
@@ -355,8 +358,8 @@ public class User {
                 int responsecode = connection.getResponseCode();
 
                 if (responsecode != 200) {
-                    Proxy.getInstance().getLogger().error(String.format("Unable to fetch username for %s, please update the name manually.", uuid));
-                    Proxy.getInstance().getLogger().warn(String.format("Setting the default name 'x' for user %s.", uuid));
+                    Proxy.getInstance().getLogger().error("Unable to fetch username for {}, please update the name manually.", uuid);
+                    Proxy.getInstance().getLogger().warn("Setting the default name 'x' for user {}.", uuid);
                     globalSQL.update("UPDATE player_data SET name='x' WHERE uuid='" + uuid + "';");
                 } else {
                     JsonNode jsonNode = getJsonNodeFromUrl(url);
@@ -366,8 +369,8 @@ public class User {
                     globalSQL.update("UPDATE player_data SET name='" + name + "' WHERE uuid='" + uuid + "';");
                 }
 
-            } catch (IOException  e) {
-                Proxy.getInstance().getLogger().warn("Error occurred while fetching username for " + uuid + ": " + e.getMessage());
+            } catch (IOException | URISyntaxException e) {
+                Proxy.getInstance().getLogger().warn("Error occurred while fetching username for {}: {}", uuid, e.getMessage());
             }
         }).schedule();
     }

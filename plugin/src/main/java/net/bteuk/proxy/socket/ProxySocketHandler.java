@@ -57,7 +57,7 @@ public class ProxySocketHandler implements SocketHandler {
             case ServerStartup serverStart -> Proxy.getInstance().getServerManager().addServer(serverStart);
             case ServerShutdown serverClose -> Proxy.getInstance().getServerManager().removeServer(serverClose);
             case PlotMessage plotMessage -> Proxy.getInstance().getUserManager().sendPlotMessageToAll(plotMessage);
-            default -> Proxy.getInstance().getLogger().warn(String.format("Socket object has an unrecognised type %s", abstractTransferObject.getClass().getTypeName()));
+            default -> Proxy.getInstance().getLogger().warn("Socket object has an unrecognised type {}", abstractTransferObject.getClass().getTypeName());
         }
         return null;
     }
