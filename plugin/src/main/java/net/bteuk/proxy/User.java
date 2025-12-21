@@ -140,15 +140,15 @@ public class User {
         if (displayName != null) {
             this.displayName = GsonComponentSerializer.gson().deserialize(displayName);
         } else {
-            this.displayName = Component.text(this.name);
+            this.displayName = ChatUtils.line(this.name);
         }
     }
 
-    public boolean updateDisplayName(Component newDisplayName) {
+    public Component updateDisplayName(Component newDisplayName) {
         // Assert whether the display name is valid.
         if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
             Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
-            return false;
+            return null;
         }
         // Strip any formatting.
         newDisplayName = stripDecorations(newDisplayName);
@@ -163,7 +163,7 @@ public class User {
         // Update TAB.
         Proxy.getInstance().getTabManager().updatePlayerByUuid(uuid);
         Proxy.getInstance().getChatHandler().handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Set nickname to ").append(newDisplayName), false));
-        return true;
+        return newDisplayName;
     }
 
     /**

@@ -260,6 +260,7 @@ public class TabManager {
         // Optional style that will overwrite any custom style.
         Style.Builder statusStyle = Style.style();
 
+        Component name = ChatUtils.line(tabPlayer.getName());
         if (userToAdd != null) {
             if (userToAdd.isMuted()) {
                 statusStyle.color(NamedTextColor.DARK_RED);
@@ -274,9 +275,9 @@ public class TabManager {
                 statusStyle.decorate(TextDecoration.STRIKETHROUGH);
                 statusStyle.color(NamedTextColor.WHITE);
             }
+            name = userToAdd.getDisplayName();
         }
 
-        Component name = user.getDisplayName();
         // Apply the status overlay to the entire tree if exists.
         Style style = statusStyle.build();
         if (!style.isEmpty()) {
