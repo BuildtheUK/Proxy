@@ -1,5 +1,5 @@
 #Config version (do not update)
-version: "1.8.0"
+version: "1.9.4"
 
 #Bot token
 token: "insert token here"
@@ -76,3 +76,10 @@ database:
 
 #Progress map link
 progress_map: https://maphub.net/BTEItaliaLocals/bte-uk-progress-map
+
+#Header lines of tab - in MiniMessage format
+tab:
+  header: "<b><aqua>Your</aqua> <dark_aqua>Name</dark_aqua></b>
+"
+  footer: "Server Info: <gray>/help</gray>
+More Info: <gray>/discord</gray>"

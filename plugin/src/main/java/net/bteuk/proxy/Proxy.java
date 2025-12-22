@@ -156,7 +156,7 @@ public class Proxy {
 
         chatManager = new ChatManager(userManager);
 
-        tabManager = new TabManager(server);
+        tabManager = new TabManager(server, config);
 
         serverManager = new ServerManager(this);
 

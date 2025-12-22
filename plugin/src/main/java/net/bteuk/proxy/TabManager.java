@@ -8,10 +8,12 @@ import lombok.Getter;
 import net.bteuk.network.lib.dto.AddTeamEvent;
 import net.bteuk.network.lib.dto.TabPlayer;
 import net.bteuk.network.lib.utils.ChatUtils;
+import net.bteuk.proxy.config.Config;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,28 +30,36 @@ import java.util.concurrent.TimeUnit;
 public class TabManager {
 
     private final ProxyServer server;
+    private final Config config;
 
     @Getter
     private final Set<TabPlayer> tabPlayers = new HashSet<>();
 
-    private static final Component HEADER = Component.text("BTE ", NamedTextColor.AQUA, TextDecoration.BOLD)
-            .append(Component.text("UK", NamedTextColor.DARK_AQUA, TextDecoration.BOLD))
-            .append(Component.newline());
+    private final Component HEADER;
+    private final Component FOOTER;
 
-    private static final Component FOOTER = Component.newline()
-            .append(ChatUtils.line("Server Info: "))
-            .append(Component.text("/help", NamedTextColor.GRAY))
-            .append(Component.newline())
-            .append(ChatUtils.line("More Info: "))
-            .append(Component.text("/discord", NamedTextColor.GRAY));
-
-    public TabManager(ProxyServer server) {
+    public TabManager(ProxyServer server, Config config) {
         this.server = server;
+        this.config = config;
+        this.HEADER = header();
+        this.FOOTER = footer();
 
         // Update ping every 30 seconds.
         Proxy.getInstance().getServer().getScheduler().buildTask(Proxy.getInstance(), this::updatePing)
                 .repeat(30L, TimeUnit.SECONDS)
                 .schedule();
+    }
+
+    public Component header() {
+        MiniMessage miniMessage = MiniMessage.miniMessage();
+        String header = config.getString("tab.header");
+        return miniMessage.deserialize(header);
+    }
+
+    public Component footer() {
+        MiniMessage miniMessage = MiniMessage.miniMessage();
+        String footer = config.getString("tab.footer");
+        return miniMessage.deserialize(footer);
     }
 
     /**
