@@ -82,7 +82,7 @@ public class CommandManager extends ListenerAdapter {
 
         //Create commands.
         commands.add(new Playerlist("playerlist", "List all online players on the Minecraft server."));
-        commands.add(new Map("map", "Sends a link to the BTE UK progress map."));
+        commands.add(new Map("map", "Sends a link to the UK progress map."));
 
         commands.add(new ClaimedPlots("claimedplots", "List all plots that are currently claimed.", playerOption));
         commands.add(new SubmittedPlots("submittedplots", "List all plots that are currently submitted.", playerOption));

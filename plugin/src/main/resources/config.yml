@@ -83,3 +83,6 @@ tab:
 "
   footer: "Server Info: <gray>/help</gray>
 More Info: <gray>/discord</gray>"
+
+#Discord user activity playing status (your server name or IP)
+DiscordPlaying: "server.net"

@@ -72,7 +72,7 @@ public class Discord {
 
         builder.setAutoReconnect(true);
 
-        builder.setActivity(Activity.playing("bteuk.net"));
+        builder.setActivity(Activity.playing(Proxy.getInstance().getConfig().getString("DiscordPlaying")));
 
         builder.addEventListeners(new DiscordChatListener(chat_channel, support_chat, staff_channel));
         builder.addEventListeners(new BotChatListener());
