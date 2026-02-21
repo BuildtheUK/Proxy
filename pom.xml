@@ -55,6 +55,11 @@
             <id>scarsz</id>
             <url>https://nexus.scarsz.me/content/groups/public/</url>
         </repository>
+        <repository>
+            <id>smyler-releases</id>
+            <name>Smyler's maven repository</name>
+            <url>https://maven.smyler.net/releases</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
