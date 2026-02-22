@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 
 import org.btuk.proxy.core.ProxyController;
 
-@Plugin(id = "proxy", name = "Proxy", version = "1.9.4",
+@Plugin(id = "proxy", name = "Proxy", version = "1.10.0",
         url = "https://github.com/BTEUK/Proxy", description = "Proxy plugin, managed chat, discord and server related actions.", authors = {"ELgamer"})
 public class Proxy {
 
@@ -81,7 +81,7 @@ public class Proxy {
         ProxyPlayerManager playerManager = new ProxyPlayerManager(this);
         ProxyCoreServerManager serverManager = new ProxyCoreServerManager(controller.getGlobalSQL(), this);
         ProxyChatHandler chatHandler = new ProxyChatHandler(serverManager, controller.getConfig());
-        ProxyTabManager tabManager = new ProxyTabManager(getServer(), controller.getConfig(), controller.getCoreUserManager(), chatHandler);
+        ProxyTabManager tabManager = new ProxyTabManager(getServer(), scheduler, controller.getConfig(), controller.getCoreUserManager(), chatHandler);
 
         // Start socket.
         Consumer<ProxySocketHandler> socketInitializer;
