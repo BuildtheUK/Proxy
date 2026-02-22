@@ -1,0 +1,83 @@
+#Config version (do not update)
+version: "1.10.0"
+
+#Bot token
+token: "insert token here"
+
+#Default server
+default_server: "lobby"
+
+#Channels IDS in discord for the following chat channels.
+chat:
+  global: 0
+  support:
+    info: 0
+    chat: 0
+  staff: 0
+
+#Discord role IDs.
+discord_roles:
+  reviewer: 815686457838272512
+  architect: 1050426152700878871
+  builder: 696773933256671373
+  jrbuilder: 837045714562973754
+  apprentice: 728017845652553799
+  applicant: 955520858577850458
+
+#Chat Socket Port
+socket:
+  input:
+    port: 30589
+  output:
+    - server:
+      IP:
+      port:
+    - server:
+      IP:
+      port:
+    - server:
+      IP:
+      port:
+    - server:
+      IP:
+      port:
+
+
+#Network messages
+#%player% is a placeholder for the player name.
+custom_messages:
+  join: '%player% has joined UKnet'
+  welcome: 'Welcome to UKnet, %player%'
+  reconnect: '%player% has rejoined UKnet'
+  leave: '%player% has left UKnet'
+
+#Message ID in discord.
+message:
+  reviewer: 1234
+
+#Role syncing will give all users with any of the 'has' roles the 'give' roles.
+#Roles must be the role id.
+role_syncing:
+  has: [ ]
+  give: [ ]
+
+
+#Database login
+host: localhost
+port: 3306
+username: root
+password: password
+
+#Database names (doesn't require adjusting)
+database:
+  global: uknet_global
+  plot: uknet_plots
+  region: uknet_regions
+
+#Header lines of tab - in MiniMessage format
+tab:
+  header: "<b><aqua>Your</aqua> <dark_aqua>server</dark_aqua></b>\n"
+  footer: "\nServer Info: <gray>/help</gray>\nMore Info: <gray>/discord</gray>"
+
+#Discord user activity playing status (your server name or IP)
+DiscordPlaying: "server.net"

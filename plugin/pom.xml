@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>net.bteuk</groupId>
+        <groupId>org.btuk</groupId>
         <artifactId>Proxy</artifactId>
-        <version>1.9.4</version>
+        <version>1.10.0</version>
     </parent>
 
-    <groupId>net.bteuk.proxy</groupId>
+    <groupId>org.btuk.proxy</groupId>
     <artifactId>plugin</artifactId>
     <name>Proxy Plugin</name>
 
@@ -106,49 +106,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.bteuk.proxy</groupId>
-            <artifactId>database</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.BTEUK</groupId>
-            <artifactId>NetworkLib</artifactId>
+            <groupId>org.btuk.proxy</groupId>
+            <artifactId>core</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.velocitypowered</groupId>
             <artifactId>velocity-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jul-to-slf4j</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.dv8tion</groupId>
-            <artifactId>JDA</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-
-        <!--Test dependencies-->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
         </dependency>
     </dependencies>
 </project>
