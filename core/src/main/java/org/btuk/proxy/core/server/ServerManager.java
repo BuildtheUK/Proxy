@@ -90,12 +90,13 @@ public class ServerManager {
             // Set the server online in the database.
             globalSQL.update("UPDATE server_data SET online=1 WHERE name='" + server.getName() + "';");
 
-            // Send all online users to the server as reply.
+            // Send all online users to the server as a reply.
             chatHandler.handle(new OnlineUsersReply(coreUserManager.getOnlineUsers()));
             tabManager.sendAddTeam();
+        } else {
+            // The server is not online.
+            log.warning(String.format("Server " + server.getName() + " is not online."));
         }
-        // The server is not online.
-        log.warning(String.format("Server " + server.getName() + " is not online."));
     }
 
     private void pingServers() {

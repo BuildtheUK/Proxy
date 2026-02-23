@@ -72,16 +72,16 @@ public class Proxy {
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
 
-        ProxyController controller = new ProxyController(getDataFolder());
+        this.proxyController = new ProxyController(getDataFolder());
 
         this.defaultServer = proxyController.getConfig().getString("default_server");
 
         ProxyScheduler scheduler = new ProxyScheduler(this);
 
         ProxyPlayerManager playerManager = new ProxyPlayerManager(this);
-        ProxyCoreServerManager serverManager = new ProxyCoreServerManager(controller.getGlobalSQL(), this);
-        ProxyChatHandler chatHandler = new ProxyChatHandler(serverManager, controller.getConfig());
-        ProxyTabManager tabManager = new ProxyTabManager(getServer(), scheduler, controller.getConfig(), controller.getCoreUserManager(), chatHandler);
+        ProxyCoreServerManager serverManager = new ProxyCoreServerManager(proxyController.getGlobalSQL(), this);
+        ProxyChatHandler chatHandler = new ProxyChatHandler(serverManager, proxyController.getConfig());
+        ProxyTabManager tabManager = new ProxyTabManager(getServer(), scheduler, proxyController.getConfig(), proxyController.getCoreUserManager(), chatHandler);
 
         // Start socket.
         Consumer<ProxySocketHandler> socketInitializer;
@@ -90,14 +90,14 @@ public class Proxy {
             logger.error("Socket port is not set in config or is set to 0. Please set a valid port!");
             return;
         } else {
-            // Create the socket initializer.
+            // Create the socket initialiser.
             socketInitializer = socketHandler -> {
                 inputSocket = new InputSocket(inputSocketPort);
                 inputSocket.start(socketHandler);
             };
         }
 
-        controller.start(chatHandler, scheduler, serverManager, playerManager, tabManager, socketInitializer);
+        proxyController.start(chatHandler, scheduler, serverManager, playerManager, tabManager, socketInitializer);
 
         lastServer = new HashMap<>();
 
