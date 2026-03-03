@@ -3,16 +3,20 @@ package org.btuk.proxy.core;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.OnlineUserRemove;
+
 import org.btuk.proxy.database.DatabaseInit;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
 import org.btuk.proxy.database.sql.RegionSQL;
+
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -126,20 +130,32 @@ public class ProxyController {
                 long startTime = System.currentTimeMillis();
                 long currentTime = System.currentTimeMillis();
                 AtomicInteger users = new AtomicInteger((int) coreUserManager.countOnlineUsers());
+                CountDownLatch disconnectLatch = new CountDownLatch(users.get());
+
                 coreUserManager.runForEachOnline(user -> {
                     if (user.isOnline()) {
-                        discord.sendConnectEmbed(LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> users.decrementAndGet());
+                        discord.sendConnectEmbed(LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> {
+                            users.decrementAndGet();
+                            disconnectLatch.countDown();
+                        });
+                    } else {
+                        users.decrementAndGet();
+                        disconnectLatch.countDown();
                     }
                 });
                 // Stop if it takes longer than 15 seconds.
-                while (users.get() > 0 && (currentTime - startTime) < 15000) {
-                    // Get the time for a pontetial timeout.
-                    currentTime = System.currentTimeMillis();
+                try {
+                    boolean completed = disconnectLatch.await(15, TimeUnit.SECONDS);
+                    if (!completed) {
+                        log.warning("Timed out waiting for disconnect callbacks");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
 
                 // Clear JDA listeners
                 if (discord.getJda() != null) {
-                    //Unregister listners.
+                    //Unregister listeners.
                     discord.getJda().getEventManager().getRegisteredListeners().forEach(listener -> discord.getJda().getEventManager().unregister(listener));
                 }
 
@@ -169,6 +185,8 @@ public class ProxyController {
             if (coreServerManager != null) {
                 coreServerManager.shutdown();
             }
+
+            started = false;
         }
     }
 

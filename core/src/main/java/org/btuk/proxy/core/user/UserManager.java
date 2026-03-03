@@ -187,10 +187,9 @@ public class UserManager {
             }
             // Connect the user to the server.
             coreServerManager.getServer(switchServerEvent.getTo_server()).ifPresentOrElse(server -> {
-                user.setSwitchServer(new SwitchServer(this, coreServerManager, scheduler, user, switchServerEvent.getFrom_server(), switchServerEvent.getTo_server()));
                 // save disconnect info.
                 saveUserInfoFromDisconnect(user, switchServerEvent.getUserDisconnect());
-                user.getPlayer().connectToServer(server);
+                user.setSwitchServer(new SwitchServer(this, coreServerManager, scheduler, user, switchServerEvent.getFrom_server(), switchServerEvent.getTo_server()));
                 log.info(String.format("Connecting player to %s.", switchServerEvent.getTo_server()));
             }, () -> {
                 // Send message that the server is not online.
