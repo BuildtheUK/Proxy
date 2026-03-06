@@ -188,7 +188,7 @@ public class DatabaseUpdates {
         log.info("Updating database from 1.9.4 to 1.9.5");
 
         //add the new fields isPublic, playerBuilt and timeAdded to the buildings database
-        globalSQL.update("ALTER TABLE buildings ADD COLUMN isPublic BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN playerBuilt BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN timeAdded DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;");
+        globalSQL.update("ALTER TABLE buildings ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN player_built BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN time_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;");
 
         //add and populate the new fields lat and lon
 
