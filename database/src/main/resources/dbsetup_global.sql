@@ -214,7 +214,12 @@ CREATE TABLE IF NOT EXISTS buildings
     building_id    INT          AUTO_INCREMENT,
     coordinate_id  INT          NOT NULL,
     player_id       CHAR(36)      NOT NULL,
+    is_public        BOOLEAN      NOT NULL DEFAULT TRUE,
+    player_built     BOOLEAN      NOT NULL DEFAULT TRUE,
+    time_added       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    lat             DOUBLE DEFAULT 0,
+    lon             DOUBLE DEFAULT 0,
     PRIMARY KEY(building_id),
     CONSTRAINT fk_buildings_1 FOREIGN KEY(coordinate_id) REFERENCES coordinates(id),
     CONSTRAINT fk_buildings_2 FOREIGN KEY(player_id) REFERENCES player_data(uuid)
-);
+    );
