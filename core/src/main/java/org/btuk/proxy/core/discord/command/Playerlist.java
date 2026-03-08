@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.User;
 
 public class Playerlist extends AbstractCommand {
 
@@ -48,7 +49,7 @@ public class Playerlist extends AbstractCommand {
                 if (optionalTabPlayer.isPresent()) {
                     primaryRole = PlainTextComponentSerializer.plainText().serialize(optionalTabPlayer.get().getPrefix());
                 }
-                playerFormat.add(primaryRole + " " + onlineUser.getName());
+                playerFormat.add(primaryRole + " " + formatPlayerName(onlineUser));
             }
 
             playerListMessage += "\n```\n";
@@ -72,5 +73,18 @@ public class Playerlist extends AbstractCommand {
         reply = reply.setEphemeral(true);
         reply.queue();
 
+    }
+
+    private String formatPlayerName(OnlineUser onlineUser) {
+        User user = userManager.getUserByUuid(onlineUser.getUuid());
+        String name = onlineUser.getName();
+        if (user != null) {
+            if (user.isFocusEnabled()) {
+                name = String.format("%s (focus)", user.getName());
+            } else if (user.isAfk()) {
+                name = String.format("%s (afk)", user.getName());
+            }
+        }
+        return name;
     }
 }
