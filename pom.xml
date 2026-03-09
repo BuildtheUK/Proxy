@@ -6,7 +6,7 @@
 
     <groupId>org.btuk</groupId>
     <artifactId>Proxy</artifactId>
-    <version>1.10.0</version>
+    <version>1.10.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Proxy</name>
