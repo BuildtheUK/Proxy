@@ -1,0 +1,18 @@
+rules:
+  - flagged_words: []
+    punishment:
+      type: mute
+      duration: 6
+      duration_unit: hours
+  - flagged_words: []
+    punishment:
+      type: flag
+      points: 1
+  - flagged_words: []
+    punishment:
+      type: flag
+      points: 5
+  - flagged_words: []
+    punishment:
+      type: flag
+      points: 10

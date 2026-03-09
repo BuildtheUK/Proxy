@@ -1,22 +1,29 @@
-package org.btuk.proxy.core.chat;
+package org.btuk.proxy.core.chat.automod;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.btuk.proxy.core.config.Config;
 import org.btuk.proxy.core.user.CoreUserManager;
 import org.btuk.proxy.core.user.User;
 
 /**
  * Represents the auto-moderation system for managing chat messages.
  */
-public class Automod {
+public class AutoMod {
 
     private static final PlainTextComponentSerializer SERIALIZER = PlainTextComponentSerializer.builder().build();
 
     private final CoreUserManager userManager;
 
-    public Automod(CoreUserManager userManager) {
+    private final List<AutoModRule> rules = new ArrayList<>();
+
+    public AutoMod(CoreUserManager userManager, Config autoModConfig) {
         this.userManager = userManager;
+        loadConfig(autoModConfig);
     }
 
     /**
@@ -53,6 +60,10 @@ public class Automod {
      * @param user the user to check
      */
     private void checkUser(User user) {
+
+    }
+
+    private static void loadConfig(Config config) {
 
     }
 }

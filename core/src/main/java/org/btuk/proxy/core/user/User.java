@@ -10,6 +10,8 @@ import net.bteuk.network.lib.dto.UserConnectReply;
 import net.bteuk.network.lib.dto.UserConnectRequest;
 import net.bteuk.network.lib.enums.ChatChannels;
 import net.bteuk.network.lib.utils.ChatUtils;
+
+import org.btuk.proxy.core.chat.automod.AutoModFlag;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -138,6 +140,8 @@ public class User {
     @Getter
     @Setter
     private long lastPing;
+
+    private List<AutoModFlag> autoModFlags = new ArrayList<>();
 
 //    private List<TeleportRequest> teleportRequests = new ArrayList<>();
 
@@ -356,6 +360,15 @@ public class User {
         }
     }
 
+    public void addAutoModFlag(AutoModFlag flag) {
+        autoModFlags.removeIf(AutoModFlag::isExpired);
+        autoModFlags.add(flag);
+    }
+
+    public int getAutoModFlagPoints() {
+        return autoModFlags.stream().mapToInt(AutoModFlag::getPoints).sum();
+    }
+
 //    public Component teleportRequest(UUID requester) {
 //        if (teleportRequests.stream().noneMatch(request -> request.getRequester().equals(requester))) {
 //            return ChatUtils.error("You have already requested a teleport to this player");
@@ -430,6 +443,11 @@ public class User {
                 }
             });
         }
+    }
+
+    private void loadAutoModFlags() {
+        // TODO: Load active flags and delete expired flags.
+        // TODO: We can just fetch and delete all flags in the database, as we keep them in-memory while the user is stored.
     }
 
     private static JsonNode getJsonNodeFromUrl(URL url) throws IOException {

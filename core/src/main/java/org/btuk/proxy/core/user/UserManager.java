@@ -464,9 +464,12 @@ public class UserManager {
         // Remove the user from the list.
         coreUserManager.removeUser(user);
         user.delete();
-        // Remove the user from the list of muted users for all players, if they had this player muted.
+        // Remove the user from the list of muted users for all players if they had this player muted.
         coreUserManager.unmuteUser(user);
         UserRemove userRemoveEvent = new UserRemove(user.getUuid());
+
+        // Store the auto mod status for this player.
+        // TODO: IMPLEMENT
 
         chatHandler.handle(userRemoveEvent);
         if (!shutdown) {

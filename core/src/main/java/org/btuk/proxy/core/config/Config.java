@@ -8,8 +8,8 @@ public class Config {
 
     private final ConfigurationFile config;
 
-    public Config(File dataFolder) throws IOException {
-        config = new YamlConfigurationFile(getClass().getClassLoader().getResourceAsStream("proxy-config.yml"), new File(dataFolder, "proxy-config.yml"));
+    public Config(File dataFolder, String fileName) throws IOException {
+        config = new YamlConfigurationFile(getClass().getClassLoader().getResourceAsStream(fileName), new File(dataFolder, fileName));
     }
 
     public String getString(String path) {

@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.OnlineUserRemove;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.database.DatabaseInit;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -50,6 +51,8 @@ public class ProxyController {
 
     private boolean started = false;
 
+    private final File dataFolder;
+
     @Getter
     private final Config config;
 
@@ -72,12 +75,14 @@ public class ProxyController {
     private UserManager userManager;
 
     public ProxyController(File dataFolder) {
+        this.dataFolder = dataFolder;
+
         // Init logging to ensure java util logging works.
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
         try {
-            config = new Config(dataFolder);
+            config = new Config(dataFolder, "proxy-config.yml");
             Constants.init(config);
         } catch (IOException e) {
             log.warning("An error occurred while loading the config: " + e.getMessage());
@@ -91,7 +96,7 @@ public class ProxyController {
     }
 
 
-    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) {
+    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) throws IOException {
 
         if (!enabled) {
             log.severe("Proxy is not enabled, see previous logs for errors.");
@@ -104,7 +109,8 @@ public class ProxyController {
         this.analytics = new Analytics(coreUserManager, globalSQL, scheduler);
         Moderation moderation = new Moderation(globalSQL);
 
-        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation);
+        AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, "automod.yml"));
+        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
 
         this.discord = new Discord(config, globalSQL, chatHandler, scheduler, chatManager, coreUserManager, tabManager, plotSQL);
 
