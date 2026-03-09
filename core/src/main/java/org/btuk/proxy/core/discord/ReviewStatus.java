@@ -250,7 +250,7 @@ public class ReviewStatus {
             }
 
             if (regions.size() > 5) {
-                region_message.append("*and ").append(locations.size() - 5).append(" more...*");
+                region_message.append("*and ").append(regions.size() - 5).append(" more...*");
             }
         }
 
