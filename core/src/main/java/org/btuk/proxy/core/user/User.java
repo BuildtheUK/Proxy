@@ -361,8 +361,11 @@ public class User {
     }
 
     public void addAutoModFlag(AutoModFlag flag) {
-        autoModFlags.removeIf(AutoModFlag::isExpired);
         autoModFlags.add(flag);
+    }
+
+    public void removeExpiredAutoModFlags() {
+        autoModFlags.removeIf(AutoModFlag::isExpired);
     }
 
     public int getAutoModFlagPoints() {

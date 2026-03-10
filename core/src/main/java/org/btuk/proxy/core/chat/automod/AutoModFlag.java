@@ -11,12 +11,15 @@ public class AutoModFlag {
 
     private final long timestamp;
 
-    private final Component message;
+    private final String message;
 
-    public AutoModFlag(AutoModFlagRule rule, long timestamp, Component message) {
+    private final AutoModMatch match;
+
+    public AutoModFlag(AutoModFlagRule rule, long timestamp, String message, AutoModMatch match) {
         this.rule = rule;
         this.timestamp = timestamp;
         this.message = message;
+        this.match = match;
     }
 
     public boolean isExpired() {
