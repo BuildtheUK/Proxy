@@ -74,6 +74,10 @@ public class ProxyController {
 
     private UserManager userManager;
 
+    private static final String PROXY_CONFIG_NAME = "proxy-config.yml";
+
+    private static final String AUTOMOD_CONFIG_NAME = "automod.yml";
+
     public ProxyController(File dataFolder) {
         this.dataFolder = dataFolder;
 
@@ -82,7 +86,7 @@ public class ProxyController {
         SLF4JBridgeHandler.install();
 
         try {
-            config = new Config(dataFolder, "proxy-config.yml");
+            config = new Config(dataFolder, PROXY_CONFIG_NAME);
             Constants.init(config);
         } catch (IOException e) {
             log.warning("An error occurred while loading the config: " + e.getMessage());
@@ -106,13 +110,13 @@ public class ProxyController {
         this.chatHandler = chatHandler;
         this.coreServerManager = coreServerManager;
 
+        this.discord = new Discord(config, globalSQL, chatHandler, scheduler);
+
         this.analytics = new Analytics(coreUserManager, globalSQL, scheduler);
         Moderation moderation = new Moderation(globalSQL);
 
-        AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, "automod.yml"));
+        AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
         ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
-
-        this.discord = new Discord(config, globalSQL, chatHandler, scheduler, chatManager, coreUserManager, tabManager, plotSQL);
 
         this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord);
 
@@ -120,6 +124,8 @@ public class ProxyController {
 
         // Set up the review status message.
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
+
+        this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
 
         serverManager.initOnlineServers();
 

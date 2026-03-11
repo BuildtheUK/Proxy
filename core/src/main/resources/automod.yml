@@ -1,4 +1,7 @@
 enabled: false
+points_threshold: 100
+flag_mute_duration: 6
+flag_mute_duration_unit: HOURS
 rules:
   - flagged_words: []
     punishment:

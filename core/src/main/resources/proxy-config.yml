@@ -14,6 +14,7 @@ chat:
     info: 0
     chat: 0
   staff: 0
+  moderator: 0
 
 #Discord role IDs.
 discord_roles:

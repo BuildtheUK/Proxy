@@ -1,10 +1,11 @@
 package org.btuk.proxy.core.chat.automod;
 
+import lombok.Getter;
 import lombok.extern.java.Log;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,12 +32,28 @@ public class AutoModConfig {
 
     private static final String PUNISHMENT_DELETE_MESSAGES_PATH = "delete_message";
 
-    public static List<AutoModRule> loadConfig(Config config) {
+    private final Config config;
+
+    @Getter
+    private final boolean enabled;
+
+    @Getter
+    private final int pointsThreshold;
+
+    @Getter
+    private final List<AutoModRule> rules = new ArrayList<>();
+
+    public AutoModConfig(Config config) {
+        this.config = config;
+        this.enabled = config.getBoolean("enabled");
+        this.pointsThreshold = config.getInt("points_threshold");
+    }
+
+    public void loadRules() {
         List<Map<String, Object>> rulesList = config.getList(RULES_PATH);
-        if (config.getBoolean("enabled")) {
-            return loadRules(rulesList);
+        if (enabled) {
+            rules.addAll(loadRules(rulesList));
         }
-        return Collections.emptyList();
     }
 
     private static List<AutoModRule> loadRules(List<Map<String, Object>> rulesList) {

@@ -141,7 +141,8 @@ public class User {
     @Setter
     private long lastPing;
 
-    private List<AutoModFlag> autoModFlags = new ArrayList<>();
+    @Getter
+    private final List<AutoModFlag> autoModFlags = new ArrayList<>();
 
 //    private List<TeleportRequest> teleportRequests = new ArrayList<>();
 

@@ -8,6 +8,9 @@ import net.bteuk.network.lib.dto.DiscordDirectMessage;
 import net.bteuk.network.lib.dto.DiscordEmbed;
 import net.bteuk.network.lib.dto.DiscordLinking;
 import net.bteuk.network.lib.dto.DiscordRole;
+
+import org.btuk.proxy.core.chat.automod.AutoModMatch;
+import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -17,14 +20,18 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import java.awt.Color;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,10 +54,14 @@ public class Discord {
     @Getter
     private JDA jda;
 
+    private final String chatChannelId;
+    private final String staffChannelId;
+
     private TextChannel chat;
     private TextChannel staff;
     private TextChannel supportInfo;
     private TextChannel supportChat;
+    private TextChannel moderatorChat;
     private List<Long> hasRoles;
     private List<Long> giveRoles;
     
@@ -61,7 +72,7 @@ public class Discord {
     private final ChatHandler chatHandler;
     private final Scheduler scheduler;
 
-    public Discord(Config config, GlobalSQL globalSQL, ChatHandler chatHandler, Scheduler scheduler, ChatManager chatManager, CoreUserManager coreUserManager, TabManager tabManager, PlotSQL plotSQL) {
+    public Discord(Config config, GlobalSQL globalSQL, ChatHandler chatHandler, Scheduler scheduler) {
 
         this.config = config;
         this.globalSQL = globalSQL;
@@ -70,10 +81,11 @@ public class Discord {
 
         //Get token from config.
         String token = config.getString("token");
-        String chatChannel = config.getString("chat.global");
+        this.chatChannelId = config.getString("chat.global");
         String support_info = config.getString("chat.support.info");
         String supportChat = config.getString("chat.support.chat");
-        String staffChannel = config.getString("chat.staff");
+        this.staffChannelId = config.getString("chat.staff");
+        String moderatorChannel = config.getString("chat.moderator");
 
         //Create JDABuilder.
         JDABuilder builder = JDABuilder.createDefault(token);
@@ -93,18 +105,15 @@ public class Discord {
 
         builder.setActivity(Activity.playing(config.getString("DiscordPlaying")));
 
-        builder.addEventListeners(new DiscordChatListener(this, chatManager, chatChannel, supportChat, staffChannel));
-        builder.addEventListeners(new BotChatListener(chatHandler, linking));
-        builder.addEventListeners(new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL));
-
         try {
             jda = builder.build();
             jda.awaitReady();
 
-            chat = jda.getTextChannelById(chatChannel);
+            chat = jda.getTextChannelById(chatChannelId);
             supportInfo = jda.getTextChannelById(support_info);
             this.supportChat = jda.getTextChannelById(supportChat);
-            staff = jda.getTextChannelById(staffChannel);
+            staff = jda.getTextChannelById(staffChannelId);
+            this.moderatorChat = jda.getTextChannelById(moderatorChannel);
 
             //Load all members into cache.
             chat.getGuild().loadMembers().onSuccess(members -> {
@@ -117,6 +126,12 @@ public class Discord {
         } catch (InterruptedException e) {
             log.severe("An error occurred while loading discord!");
         }
+    }
+
+    public void addJDAEventListeners(ChatManager chatManager, CoreUserManager coreUserManager, TabManager tabManager, PlotSQL plotSQL) {
+        jda.addEventListener(new DiscordChatListener(this, chatManager, chatChannelId, staffChannelId));
+        jda.addEventListener(new BotChatListener(chatHandler, linking));
+        jda.addEventListener(new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL));
     }
 
     /**
@@ -405,6 +420,35 @@ public class Discord {
         return String.valueOf(getRoleID("reviewer"));
     }
 
+    public void notifyModeratorsOfAutoMute(User mutedUser, List<AutoModMatch> matches, List<String> messages, Duration duration) {
+
+        String durationMessage = DurationFormatUtils.formatDurationWords(duration.toMillis(), true, true);
+        String message = String.format("User %s has been muted by the auto-moderator for %s, please evaluate this decision and update the punishment if necessary. You can update the punishment by running the /mute command again.", mutedUser.getName(), durationMessage);
+        message += String.format("\n\nUser uuid: %s", mutedUser.getUuid());
+        message += "\n\nFlagged words:\n";
+        message += String.join(",", matches.stream().map(AutoModMatch::messageWord).toList());
+        message = messageLimit(message);
+
+        String attachmentContent = buildAutoMuteAttachment(matches, messages);
+
+        moderatorChat.sendMessage(message)
+            .addFiles(FileUpload.fromData(
+                attachmentContent.getBytes(StandardCharsets.UTF_8),
+                "automod-report.txt"
+            ))
+            .queue();
+    }
+
+    private String buildAutoMuteAttachment(List<AutoModMatch> matches, List<String> messages) {
+        return "Flagged Words:\n" +
+            matches.stream()
+                .map(match -> match.messageWord() + " - " + match.flaggedWord())
+                .reduce((a, b) -> a + "\n" + b)
+                .orElse("") +
+            "\n\nMessages:\n" +
+            String.join("\n", messages);
+    }
+
     private void enableRoleSyncing() {
 
         hasRoles = config.getLongArray("role_syncing.has");
@@ -521,8 +565,12 @@ public class Discord {
     }
 
     private static String messageLimit(String message) {
+        return messageLimit(message, "...");
+    }
+
+    private static String messageLimit(String message, String suffix) {
         if (message.length() > 2000) {
-            message = message.substring(0, 1997) + "...";
+            message = message.substring(0, 2000 - suffix.length()) + suffix;
         }
         return message;
     }

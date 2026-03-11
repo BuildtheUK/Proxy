@@ -1,5 +1,6 @@
 package org.btuk.proxy.core.chat.automod;
 
+import lombok.Getter;
 import net.kyori.adventure.text.Component;
 
 /**
@@ -11,8 +12,10 @@ public class AutoModFlag {
 
     private final long timestamp;
 
+    @Getter
     private final String message;
 
+    @Getter
     private final AutoModMatch match;
 
     public AutoModFlag(AutoModFlagRule rule, long timestamp, String message, AutoModMatch match) {
