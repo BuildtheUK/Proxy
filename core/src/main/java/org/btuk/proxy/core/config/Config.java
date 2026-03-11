@@ -3,6 +3,7 @@ package org.btuk.proxy.core.config;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class Config {
 
@@ -34,5 +35,9 @@ public class Config {
 
     public List<ConfigSocket> getSockets(String path) {
         return config.getSockets(path);
+    }
+
+    public List<Map<String, Object>> getList(String path) {
+        return config.getList(path);
     }
 }

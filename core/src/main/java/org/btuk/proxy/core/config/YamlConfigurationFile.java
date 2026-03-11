@@ -11,16 +11,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Log
 public class YamlConfigurationFile extends ConfigurationFile {
 
-    private static final Yaml yaml;
+    private static final Yaml YAML;
 
     static {
         DumperOptions options = new DumperOptions();
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        yaml = new Yaml(options);
+        YAML = new Yaml(options);
+    }
+
+    public static Map<String, Object> getMap(Object object) {
+        String yamlDumped = YAML.dump(object);
+        return YAML.load(yamlDumped);
     }
 
     public YamlConfigurationFile(InputStream source, File destination) throws YAMLException, IOException {
@@ -29,7 +35,7 @@ public class YamlConfigurationFile extends ConfigurationFile {
 
         try {
             input = new FileInputStream(file);
-            values = yaml.load(input);
+            values = YAML.load(input);
             if (values == null) {
                 values = new LinkedHashMap<>();
             }
@@ -46,7 +52,7 @@ public class YamlConfigurationFile extends ConfigurationFile {
     public void save() {
         try {
             Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
-            yaml.dump(values, writer);
+            YAML.dump(values, writer);
             writer.close();
         } catch (IOException e) {
             log.warning("Failed to save proxy-config.yml");
@@ -58,8 +64,7 @@ public class YamlConfigurationFile extends ConfigurationFile {
         Object value = getObject(path, null);
         if (value instanceof List<?> list) {
             for (Object item : list) {
-                String yamlDumped = yaml.dump(item);
-                HashMap<String, Object> socketValues = yaml.load(yamlDumped);
+                Map<String, Object> socketValues = getMap(item);
                 ConfigSocket socket = new ConfigSocket();
                 socket.setServer((String) socketValues.get("server"));
                 socket.setIP((String) socketValues.get("IP"));
@@ -68,5 +73,19 @@ public class YamlConfigurationFile extends ConfigurationFile {
             }
         }
         return sockets;
+    }
+
+    public List<Map<String, Object>> getList(String path) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        Object object = getObject(path, null);
+        if (object instanceof List<?> objectList) {
+            for (Object objectValue : objectList) {
+                Map<String, Object> valueMap = getMap(objectValue);
+                if (valueMap != null) {
+                    list.add(valueMap);
+                }
+            }
+        }
+        return list;
     }
 }

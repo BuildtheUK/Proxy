@@ -22,11 +22,11 @@ public class AutoMod {
 
     private final CoreUserManager userManager;
 
-    private final List<AutoModRule> rules = new ArrayList<>();
+    private final List<AutoModRule> rules;
 
     public AutoMod(CoreUserManager userManager, Config autoModConfig) {
         this.userManager = userManager;
-        loadConfig(autoModConfig);
+        rules = AutoModConfig.loadConfig(autoModConfig);
     }
 
     /**
@@ -67,10 +67,6 @@ public class AutoMod {
      */
     private void checkUser(User user) {
         // TODO: Mute user if they have accumulated too many points.
-    }
-
-    private static void loadConfig(Config config) {
-
     }
 
     private static void checkRule(AutoModRule rule, Map<String, CandidateWord> candidateWords, User user, String message) {
