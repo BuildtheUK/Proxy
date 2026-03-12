@@ -7,6 +7,8 @@ import org.btuk.proxy.database.sql.RegionSQL;
 import org.btuk.proxy.database.sql.migration.AcceptData;
 import org.btuk.proxy.database.sql.migration.DenyData;
 import org.btuk.proxy.database.sql.migration.PlotSubmissions;
+import net.buildtheearth.terraminusminus.generator.EarthGeneratorSettings;
+import net.buildtheearth.terraminusminus.projection.OutOfProjectionBoundsException;
 
 import java.util.List;
 
@@ -18,6 +20,9 @@ public class DatabaseUpdates {
     private final PlotSQL plotSQL;
 
     private final RegionSQL regionSQL;
+
+    private final EarthGeneratorSettings bteGeneratorSettings =
+            EarthGeneratorSettings.parse(EarthGeneratorSettings.BTE_DEFAULT_SETTINGS);
 
     public DatabaseUpdates(GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL) {
         this.globalSQL = globalSQL;
@@ -34,7 +39,7 @@ public class DatabaseUpdates {
             version = globalSQL.getString("SELECT data_value FROM unique_data WHERE data_key='version';");
         } else {
             // Insert the current database version as version.
-            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','1.9.4')");
+            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','1.9.5')");
         }
 
         log.info("Current database version: " + version);
@@ -102,11 +107,19 @@ public class DatabaseUpdates {
         if (oldVersionInt <= 11) {
             update12_11();
         }
+
+        if (oldVersionInt <= 12){
+            update12_13();
+        }
     }
 
     private int getVersionInt(String version) {
 
         switch (version) {
+
+            case "1.9.5" -> {
+                return 13;
+            }
 
             // 1.9.4 = 12
             case "1.9.4" -> {
@@ -171,6 +184,40 @@ public class DatabaseUpdates {
         }
 
     }
+
+    private void update12_13() {
+
+        log.info("Updating database from 1.9.4 to 1.9.5");
+
+        //add the new fields isPublic, playerBuilt and timeAdded to the buildings database
+        globalSQL.update("ALTER TABLE buildings ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN player_built BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN time_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;");
+
+        //add and populate the new fields lat and lon
+
+        globalSQL.update("ALTER TABLE buildings ADD COLUMN lat DOUBLE DEFAULT 0;");
+        globalSQL.update("ALTER TABLE buildings ADD COLUMN lon DOUBLE DEFAULT 0;");
+
+        List<Integer> buildingIds = globalSQL.getIntList("SELECT building_id FROM buildings;");
+
+        for (int id : buildingIds) {
+
+            try {
+                int coordinateId = globalSQL.getInt(String.format("SELECT coordinate_id FROM buildings WHERE building_id = %d;", id));
+
+                double x = globalSQL.getDouble(String.format("SELECT x FROM coordinates WHERE id = %d;", coordinateId));
+
+                double z = globalSQL.getDouble(String.format("SELECT z FROM coordinates WHERE id = %d;", coordinateId));
+
+                double[] coords = bteGeneratorSettings.projection().toGeo(x, z);
+                globalSQL.update(String.format("UPDATE buildings SET lat = %f, lon = %f WHERE building_id = %d;", coords[1], coords[0], id));
+            } catch (OutOfProjectionBoundsException e) {
+                log.warning("Failed to convert coordinates for building " + id);
+            }
+        }
+
+        globalSQL.update("UPDATE unique_data SET data_value='1.9.5' WHERE data_key='version';");
+    }
+
 
     private void update12_11() {
         log.info("Updating database from 1.7.3 to 1.9.4");
