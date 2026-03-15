@@ -224,11 +224,11 @@ CREATE TABLE IF NOT EXISTS buildings
     CONSTRAINT fk_buildings_2 FOREIGN KEY(player_id) REFERENCES player_data(uuid)
     );
 
-CREATE TABLE IF NOT EXISTS survey
+CREATE TABLE IF NOT EXISTS test_uknet_global.survey
 (
-    player UUID,
-    survey_completed_at Timestamp,
-    survey_last_edited Timestamp,
+    player VARCHAR(36),
+    survey_completed_at TIMESTAMP,
+    survey_last_edited TIMESTAMP,
     found_via_btuk BOOLEAN,
     found_via_bte BOOLEAN,
     found_via_btuk_external BOOLEAN,
@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS survey
     socials_tiktok BOOLEAN,
     socials_youtube_shorts BOOLEAN,
     socials_youtube_longform BOOLEAN,
-    socials_instagram BOOLEAN
+    socials_instagram BOOLEAN,
     PRIMARY KEY(player),
-    CONSTRAINT fk_survey_player FOREIGN KEY(player) REFERENCES player_data(uuid),
+    CONSTRAINT fk_survey_player FOREIGN KEY(player) REFERENCES player_data(uuid)
 );
