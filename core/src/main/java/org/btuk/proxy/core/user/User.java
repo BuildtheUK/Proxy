@@ -1,0 +1,476 @@
+package org.btuk.proxy.core.user;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.java.Log;
+import net.bteuk.network.lib.dto.DirectMessage;
+import net.bteuk.network.lib.dto.UserConnectReply;
+import net.bteuk.network.lib.dto.UserConnectRequest;
+import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.utils.ChatUtils;
+import org.btuk.proxy.database.sql.GlobalSQL;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.player.Player;
+import org.btuk.proxy.core.scheduler.ScheduledTask;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.scheduler.TaskStatus;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.utils.Analytics;
+import org.btuk.proxy.core.utils.SwitchServer;
+import org.btuk.proxy.core.utils.Time;
+
+/**
+ * User object, stored specific information about the user.
+ */
+@Log
+public class User {
+
+    @Getter
+    private boolean online = true;
+
+    /**
+     * Indicator for new users, so the database object is created when fetching information.
+     */
+    @Setter
+    private boolean newUser = false;
+
+    @Getter
+    private final String uuid;
+
+    /**
+     * The Proxy {@link Player}, this may be null if the user is not currently online.
+     */
+    @Getter
+    @Setter
+    private Player player;
+
+    @Getter
+    private final String name;
+
+    @Getter
+    private Component displayName;
+
+    @Getter
+    private final String playerSkin;
+
+    @Getter
+    @Setter
+    private String server;
+
+    @Getter
+    @Setter
+    private String primaryRole;
+
+    /**
+     * List of muted users for this session
+     */
+    private final Set<User> mutedUsers = new HashSet<>();
+
+    /**
+     * List of channels the user can read
+     */
+    @Getter
+    private final Set<String> channels = new HashSet<>();
+
+    @Getter
+    private boolean afk = false;
+
+    private ScheduledTask disconnectTask;
+
+    /**
+     * Utility reference to the database.
+     */
+    private final GlobalSQL globalSQL;
+
+    //Information for online-time logging.
+    //Records when the player online-time was last logged.
+    public long last_time_log = Time.currentTime();
+    //Total active time in current session.
+    public long active_time = 0L;
+
+    @Getter
+    @Setter
+    private SwitchServer switchServer = null;
+
+    @Getter
+    private boolean focusEnabled;
+
+    @Getter
+    @Setter
+    private boolean blockNextDisconnect = false;
+
+    @Getter
+    @Setter
+    private int previousPlotSubmissionCount = 0;
+
+    @Getter
+    @Setter
+    private int previousPlotVerificationCount = 0;
+
+    // Used to store the id of the last user a player messaged or was messaged by.
+    @Getter
+    @Setter
+    private String lastMessagedUserID = null;
+
+    @Getter
+    @Setter
+    private long lastPing;
+
+//    private List<TeleportRequest> teleportRequests = new ArrayList<>();
+
+    private final ChatHandler chatHandler;
+    private final TabManager tabManager;
+    private final Analytics analytics;
+    private final Scheduler scheduler;
+
+    public User(UserConnectRequest request, GlobalSQL globalSQL, ChatHandler chatHandler, TabManager tabManager, Analytics analytics, Scheduler scheduler) {
+        this.uuid = request.getUuid();
+        this.name = request.getName();
+        this.playerSkin = request.getPlayerSkin();
+        this.channels.addAll(request.getChannels());
+
+        this.globalSQL = globalSQL;
+        this.chatHandler = chatHandler;
+        this.tabManager = tabManager;
+        this.analytics = analytics;
+        this.scheduler = scheduler;
+
+        this.lastPing = Time.currentTime();
+
+        setDisplayName();
+    }
+
+    public void setDisplayName() {
+        String displayName = globalSQL.getString("SELECT display_name FROM player_data WHERE uuid='" + uuid + "';");
+        if (displayName != null) {
+            this.displayName = GsonComponentSerializer.gson().deserialize(displayName);
+        } else {
+            this.displayName = ChatUtils.line(this.name);
+        }
+    }
+
+    public Component updateDisplayName(Component newDisplayName) {
+        // Assert whether the display name is valid.
+        if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
+            return null;
+        }
+        // Strip any formatting.
+        newDisplayName = stripDecorations(newDisplayName);
+
+        // If there is no colour, explicitly set it to white.
+        newDisplayName = newDisplayName.colorIfAbsent(NamedTextColor.WHITE);
+
+        String displayName = GsonComponentSerializer.gson().serialize(newDisplayName);
+        globalSQL.update("UPDATE player_data SET display_name='" + displayName + "' WHERE uuid='" + uuid + "';");
+        this.displayName = newDisplayName;
+
+        // Update TAB.
+        tabManager.updatePlayerByUuid(uuid);
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Set nickname to ").append(newDisplayName), false));
+        return newDisplayName;
+    }
+
+    /**
+     * The user has disconnected from the network.
+     * Store their user for 5 minutes before removing it.
+     * This allows their local settings to remain stored in case they reconnect.
+     */
+    public void disconnect(Runnable runnable) {
+        long time = Time.currentTime();
+
+        //Set last_online time in playerdata.
+        globalSQL.update("UPDATE player_data SET last_online=" + time + " WHERE UUID='" + uuid + "';");
+
+        analytics.save(this, Time.getDate(time), time);
+        online = false;
+        // Run a delayed task to remove the user.
+        disconnectTask = scheduler.createDelayedTask(runnable, 5L, TimeUnit.MINUTES);
+    }
+
+    /**
+     * The user has reconnected to the network.
+     * This is fired because their user instance was still stored.
+     * Cancel the disconnect task that was scheduled.
+     */
+    public void reconnect() {
+        last_time_log = Time.currentTime();
+        online = true;
+        // Can't be afk on reconnect.
+        afk = false;
+        if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
+            disconnectTask.cancel();
+        }
+        disconnectTask = null;
+    }
+
+    /**
+     * Delete the user instance.
+     */
+    public void delete() {
+        // If the disconnectTask is running cancel.
+        if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
+            disconnectTask.cancel();
+        }
+    }
+
+    public void mute(User user) {
+        mutedUsers.add(user);
+    }
+
+    public void unmute(User user) {
+        mutedUsers.remove(user);
+    }
+
+    /**
+     * Check if the user is muted for this user.
+     *
+     * @param user the user to check
+     * @return boolean if the user is muted by this user
+     */
+    public boolean isMuted(User user) {
+        return mutedUsers.contains(user);
+    }
+
+    /**
+     * Check whether this user is globally muted.
+     *
+     * @return boolean if the user is muted
+     */
+    public boolean isMuted() {
+        return (globalSQL.hasRow("SELECT uuid FROM moderation WHERE uuid='" + uuid + "' AND end_time>" + Time.currentTime() + " AND type='mute';"));
+    }
+
+    /**
+     * Create a {@link UserConnectReply} for the user.
+     * If the User object in the database is missing, create it.
+     *
+     * @return the {@link UserConnectReply}
+     */
+    public UserConnectReply createUserConnectReply() {
+
+        // Create database object if not exists.
+        if (newUser && globalSQL.createUser(uuid, name, playerSkin)) {
+            newUser = false;
+        }
+
+        // TODO: Add a potential join event.
+
+        return new UserConnectReply(
+            this.uuid,
+            isNavigatorEnabled(),
+            isTeleportEnabled(),
+            isNightvisionEnabled(),
+            getChatChannel(),
+            isTipsEnabled(),
+            getOfflineMessages(),
+            this.focusEnabled,
+            this.displayName
+        );
+    }
+
+    public void setAfk(boolean afk) {
+        if (afk) {
+            long time = Time.currentTime();
+            //Update playtime, and pause it.
+            analytics.save(this, Time.getDate(time), time);
+        } else {
+            //Reset last logged time.
+            last_time_log = Time.currentTime();
+        }
+        this.afk = afk;
+    }
+
+    public void setFocusEnabled(boolean focusEnabled) {
+        this.focusEnabled = focusEnabled;
+        // Update Tab for this player.
+        tabManager.updatePlayerByUuid(uuid);
+    }
+
+    public void clearJoinEvent() {
+        globalSQL.update("DELETE FROM join_events WHERE uuid='" + uuid + "';");
+    }
+
+    public void setNavigatorEnabled(boolean enabled) {
+        globalSQL.update("UPDATE player_data SET navigator=" + enabled + " WHERE uuid='" + uuid + "';");
+    }
+
+    private boolean isNavigatorEnabled() {
+        return globalSQL.getBoolean("SELECT navigator FROM player_data WHERE uuid='" + uuid + "';");
+    }
+
+    public void setTeleportEnabled(boolean enabled) {
+        globalSQL.update("UPDATE player_data SET teleport_enabled=" + enabled + " WHERE uuid='" + uuid + "';");
+    }
+
+    private boolean isTeleportEnabled() {
+        return globalSQL.getBoolean("SELECT teleport_enabled FROM player_data WHERE uuid='" + uuid + "';");
+    }
+
+    public void setNightvisionEnabled(boolean enabled) {
+        globalSQL.update("UPDATE player_data SET nightvision_enabled=" + enabled + " WHERE uuid='" + uuid + "';");
+    }
+
+    private boolean isNightvisionEnabled() {
+        return globalSQL.getBoolean("SELECT nightvision_enabled FROM player_data WHERE uuid='" + uuid + "';");
+    }
+
+    public void setChatChannel(String channel) {
+        globalSQL.update("UPDATE player_data SET chat_channel='" + channel + "' WHERE uuid='" + uuid + "';");
+    }
+
+    public void setName(String name) {
+        // Check if the name is not in use with another user, else correct that.
+        String uuidForName = globalSQL.getString("SELECT uuid FROM player_data WHERE name='" + name + "';");
+        if (uuidForName != null && !uuid.equals(uuidForName)) {
+            // Another user has this username, fix that.
+            // Update the new name asynchronously.
+            updateNameAsync(uuidForName);
+            globalSQL.update("UPDATE player_data SET name='" + name + "' WHERE uuid='" + uuid + "';");
+        } else if (uuidForName == null && !newUser) {
+            // No user exists with this name, set the name.
+            globalSQL.update("UPDATE player_data SET name='" + name + "' WHERE uuid='" + uuid + "';");
+        }
+    }
+
+//    public Component teleportRequest(UUID requester) {
+//        if (teleportRequests.stream().noneMatch(request -> request.getRequester().equals(requester))) {
+//            return ChatUtils.error("You have already requested a teleport to this player");
+//        } else {
+//            TeleportRequest request = new TeleportRequest(this, requester);
+//            teleportRequests.add(request);
+//            return ChatUtils.success("Teleport request sent to %s", displayName);
+//        }
+//    }
+//
+//    public Component denyTeleportRequest(UUID requester) {
+//        TeleportRequest request = teleportRequests.stream().filter(teleportRequest -> teleportRequest.getRequester().equals(requester)).findFirst().orElse(null);
+//        if (request == null) {
+//            return ChatUtils.error("You have not requested a teleport to %s", displayName);
+//        }
+//        return ChatUtils.success("Teleport request denied to %s", displayName);
+//    }
+//
+//    public void removeTeleportRequest(UUID id) {
+//        teleportRequests.removeIf(request -> request.getId().equals(id));
+//    }
+
+    private String getChatChannel() {
+        return globalSQL.getString("SELECT chat_channel FROM player_data WHERE uuid='" + uuid + "';");
+    }
+
+    public void setTipsEnabled(boolean enabled) {
+        globalSQL.update("UPDATE player_data SET tips_enabled=" + enabled + " WHERE uuid='" + uuid + "';");
+    }
+
+    private boolean isTipsEnabled() {
+        return globalSQL.getBoolean("SELECT tips_enabled FROM player_data WHERE uuid='" + uuid + "';");
+    }
+
+    private List<Component> getOfflineMessages() {
+        List<Component> components = new ArrayList<>();
+        List<String> messages = globalSQL.getOfflineMessages(uuid);
+        messages.forEach(message -> components.add(GsonComponentSerializer.gson().deserialize(message)));
+        // Delete the messages.
+        globalSQL.update("DELETE FROM messages WHERE recipient='" + uuid + "'");
+        return components;
+    }
+
+    private void updateNameAsync(String uuid) {
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+
+            executor.submit(() -> {
+                String stringUrl = "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid.replace("-", "");
+                try {
+                    URL url = new URI(stringUrl).toURL();
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.connect();
+
+                    //Getting the response code
+                    int responsecode = connection.getResponseCode();
+
+                    if (responsecode != 200) {
+                        log.severe("Unable to fetch username for " + uuid + ", please update the name manually.");
+                        log.warning("Setting the default name 'x' for user " + uuid + ".");
+                        globalSQL.update("UPDATE player_data SET name='x' WHERE uuid='" + uuid + "';");
+                    } else {
+                        JsonNode jsonNode = getJsonNodeFromUrl(url);
+                        JsonNode nameNode = jsonNode.get("name");
+                        String name = nameNode.asText();
+
+                        globalSQL.update("UPDATE player_data SET name='" + name + "' WHERE uuid='" + uuid + "';");
+                    }
+
+                } catch (IOException | URISyntaxException e) {
+                    log.warning("Error occurred while fetching username for " + uuid + ": " + e.getMessage());
+                }
+            });
+        }
+    }
+
+    private static JsonNode getJsonNodeFromUrl(URL url) throws IOException {
+        StringBuilder inline = new StringBuilder();
+        Scanner scanner = new Scanner(url.openStream());
+
+        //Write all the JSON data into a string using a scanner
+        while (scanner.hasNext()) {
+            inline.append(scanner.nextLine());
+        }
+
+        //Close the scanner
+        scanner.close();
+
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readTree(inline.toString());
+    }
+
+    /**
+     * Recursively strips all text decorations (bold, italic, etc.) from the component tree,
+     * preserving colors and inheritance.
+     */
+    private static Component stripDecorations(Component component) {
+        Style cleanStyle = component.style().toBuilder()
+            .decoration(TextDecoration.BOLD, TextDecoration.State.NOT_SET)
+            .decoration(TextDecoration.ITALIC, TextDecoration.State.NOT_SET)
+            .decoration(TextDecoration.UNDERLINED, TextDecoration.State.NOT_SET)
+            .decoration(TextDecoration.STRIKETHROUGH, TextDecoration.State.NOT_SET)
+            .decoration(TextDecoration.OBFUSCATED, TextDecoration.State.NOT_SET)
+            .build();
+
+        Component cleaned = component.style(cleanStyle);
+
+        // Recurse on children, letting inheritance apply parent's clean style.
+        if (!component.children().isEmpty()) {
+            List<Component> cleanChildren = component.children().stream()
+                .map(User::stripDecorations)
+                .toList();
+            cleaned = cleaned.children(cleanChildren);
+        }
+
+        return cleaned;
+    }
+}
