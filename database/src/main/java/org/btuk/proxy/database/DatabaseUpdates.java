@@ -39,7 +39,7 @@ public class DatabaseUpdates {
             version = globalSQL.getString("SELECT data_value FROM unique_data WHERE data_key='version';");
         } else {
             // Insert the current database version as version.
-            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','1.9.5')");
+            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','1.11.0')");
         }
 
         log.info("Current database version: " + version);
@@ -108,8 +108,14 @@ public class DatabaseUpdates {
             update12_11();
         }
 
+        // 1.7.3 -> 1.9.5
         if (oldVersionInt <= 12){
             update12_13();
+        }
+
+        // 1.9.5 -> 1.11.0
+        if (oldVersionInt <= 13){
+            update13_14();
         }
     }
 
@@ -117,6 +123,12 @@ public class DatabaseUpdates {
 
         switch (version) {
 
+            // 1.11.0 = 14
+            case "1.11.0" -> {
+                return 14;
+            }
+
+            // 1.9.5 = 13
             case "1.9.5" -> {
                 return 13;
             }
@@ -183,6 +195,12 @@ public class DatabaseUpdates {
 
         }
 
+    }
+
+    private void update13_14() {
+
+        log.info("Updating database from 1.9.5 to 1.11.0");
+        globalSQL.update("UPDATE unique_data SET data_value='1.11.0' WHERE data_key='version';");
     }
 
     private void update12_13() {
