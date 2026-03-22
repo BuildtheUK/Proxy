@@ -3,11 +3,15 @@ package org.btuk.proxy.tab;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.util.GameProfile;
+import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.TabPlayer;
+
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.tab.AbstractTabManager;
 import org.btuk.proxy.player.ProxyPlayer;
+
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +28,7 @@ import org.btuk.proxy.core.user.User;
  * Keeps track of all users and their tab information.
  * Sends updates to the servers when things change.
  */
+@Log
 public class ProxyTabManager extends AbstractTabManager {
 
     private final ProxyServer server;
@@ -121,6 +126,7 @@ public class ProxyTabManager extends AbstractTabManager {
 
     @Override
     protected void updatePlayerDisplayName(String name, TabPlayer tabPlayer) {
+        log.info("Updating display name for " + name);
         server.getAllPlayers().forEach(player -> {
             User user = coreUserManager.getUserByUuid(String.valueOf(player.getUniqueId()));
             if (user != null) {
@@ -159,7 +165,10 @@ public class ProxyTabManager extends AbstractTabManager {
     }
 
     private void updateDisplayName(com.velocitypowered.api.proxy.Player player, String name, Component displayName) {
-        player.getTabList().getEntries().stream().filter(tabListEntry -> tabListEntry.getProfile().getName().equalsIgnoreCase(name) && tabListEntry.isListed()).findFirst().ifPresent(tabListEntry -> tabListEntry.setDisplayName(displayName));
+        player.getTabList().getEntries().stream().filter(tabListEntry -> tabListEntry.getProfile().getName().equalsIgnoreCase(name) && tabListEntry.isListed()).forEach(tabListEntry -> {
+            log.info("Setting display name of " + name + " in tab of " + player.getUsername() + " to " + GsonComponentSerializer.gson().serialize(displayName));
+            tabListEntry.setDisplayName(displayName);
+        });
     }
 
     private Optional<TabListEntry> findTabListEntryForPlayer(Collection<TabListEntry> tabEntries, String playerName) {
