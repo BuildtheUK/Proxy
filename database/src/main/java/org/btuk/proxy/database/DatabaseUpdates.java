@@ -1,5 +1,6 @@
 package org.btuk.proxy.database;
 
+import lombok.Getter;
 import lombok.extern.java.Log;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -9,11 +10,15 @@ import org.btuk.proxy.database.sql.migration.DenyData;
 import org.btuk.proxy.database.sql.migration.PlotSubmissions;
 import net.buildtheearth.terraminusminus.generator.EarthGeneratorSettings;
 import net.buildtheearth.terraminusminus.projection.OutOfProjectionBoundsException;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 @Log
 public class DatabaseUpdates {
+
+    // Version of the database that this build expects.
+    private static final Version EXPECTED_VERSION = Version.of(1, 10, 0);
 
     private final GlobalSQL globalSQL;
 
@@ -22,7 +27,7 @@ public class DatabaseUpdates {
     private final RegionSQL regionSQL;
 
     private final EarthGeneratorSettings bteGeneratorSettings =
-            EarthGeneratorSettings.parse(EarthGeneratorSettings.BTE_DEFAULT_SETTINGS);
+        EarthGeneratorSettings.parse(EarthGeneratorSettings.BTE_DEFAULT_SETTINGS);
 
     public DatabaseUpdates(GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL) {
         this.globalSQL = globalSQL;
@@ -39,174 +44,45 @@ public class DatabaseUpdates {
             version = globalSQL.getString("SELECT data_value FROM unique_data WHERE data_key='version';");
         } else {
             // Insert the current database version as version.
-            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','1.11.0')");
+            globalSQL.update("INSERT INTO unique_data(data_key, data_value) VALUES('version','" + EXPECTED_VERSION +  "')");
         }
 
-        log.info("Current database version: " + version);
+        Version currentVersion = Version.parse(version);
 
-        // Check for specific table columns that could be missing,
-        // All changes have to be tested from 1.0.0.
-        // We update 1 version at a time.
+        log.info("Current database version: " + currentVersion);
 
-        // Convert config version to integer, so we can easily use them.
-        int oldVersionInt = getVersionInt(version);
-
-        // Update sequentially.
-
-        // 1.0.0 -> 1.1.0
-        if (oldVersionInt <= 1) {
-            update1_2();
+        // If the database is already newer than what this build expects, do nothing.
+        if (currentVersion.compareTo(EXPECTED_VERSION) >= 0) {
+            log.info("Database version is newer than or equal to the expected version. Skipping migrations.");
+            return;
         }
 
-        // 1.1.0 -> 1.2.0
-        if (oldVersionInt <= 2) {
-            update2_3();
-        }
-
-        // 1.2.0 -> 1.3.0
-        if (oldVersionInt <= 3) {
-            update3_4();
-        }
-
-        // 1.3.0 -> 1.4.4
-        if (oldVersionInt <= 4) {
-            update4_5();
-        }
-
-        // 1.4.4 -> 1.5.0
-        if (oldVersionInt <= 5) {
-            update5_6();
-        }
-
-        // 1.5.0 -> 1.6.0
-        if (oldVersionInt <= 6) {
-            update6_7();
-        }
-
-        // 1.6.0 -> 1.7.0
-        if (oldVersionInt <= 7) {
-            update7_8();
-        }
-
-        // 1.7.0 -> 1.7.1
-        if (oldVersionInt <= 8) {
-            update8_9();
-        }
-
-        // 1.7.1 -> 1.7.2
-        if (oldVersionInt <= 9) {
-            update9_10();
-        }
-
-        // 1.7.2 -> 1.7.3
-        if (oldVersionInt <= 10) {
-            update10_11();
-        }
-
-        // 1.7.3 -> 1.9.4
-        if (oldVersionInt <= 11) {
-            update12_11();
-        }
-
-        // 1.7.3 -> 1.9.5
-        if (oldVersionInt <= 12){
-            update12_13();
-        }
-
-        // 1.9.5 -> 1.11.0
-        if (oldVersionInt <= 13){
-            update13_14();
+        for (MigrationStep step : migrationSteps()) {
+            if (currentVersion.isLowerThan(step.getTargetVersion())) {
+                currentVersion = step.migrate(currentVersion);
+            }
         }
     }
 
-    private int getVersionInt(String version) {
-
-        switch (version) {
-
-            // 1.11.0 = 14
-            case "1.11.0" -> {
-                return 14;
-            }
-
-            // 1.9.5 = 13
-            case "1.9.5" -> {
-                return 13;
-            }
-
-            // 1.9.4 = 12
-            case "1.9.4" -> {
-                return 12;
-            }
-
-            // 1.7.3 = 11
-            case "1.7.3" -> {
-                return 11;
-            }
-
-            // 1.7.2 = 10
-            case "1.7.2" -> {
-                return 10;
-            }
-
-            // 1.7.1 = 9
-            case "1.7.1" -> {
-                return 9;
-            }
-
-            // 1.7.0 = 8
-            case "1.7.0" -> {
-                return 8;
-            }
-
-            // 1.6.0 = 7
-            case "1.6.0" -> {
-                return 7;
-            }
-
-            // 1.5.0 = 6
-            case "1.5.0" -> {
-                return 6;
-            }
-
-            // 1.4.4 = 5
-            case "1.4.4" -> {
-                return 5;
-            }
-
-            // 1.3.0 = 4
-            case "1.3.0" -> {
-                return 4;
-            }
-
-            // 1.2.0 = 3
-            case "1.2.0" -> {
-                return 3;
-            }
-
-            // 1.1.0 = 2
-            case "1.1.0" -> {
-                return 2;
-            }
-
-            // Default is 1.0.0 = 1;
-            default -> {
-                return 1;
-            }
-
-        }
-
+    private List<MigrationStep> migrationSteps() {
+        return List.of(
+            new MigrationStep(Version.of(1, 1, 0), this::update1_1_0),
+            new MigrationStep(Version.of(1, 2, 0), this::update1_2_0),
+            new MigrationStep(Version.of(1, 3, 0), this::update1_3_0),
+            new MigrationStep(Version.of(1, 4, 4), this::update1_4_4),
+            new MigrationStep(Version.of(1, 5, 0), this::update1_5_0),
+            new MigrationStep(Version.of(1, 6, 0), this::update1_6_0),
+            new MigrationStep(Version.of(1, 7, 0), this::update1_7_0),
+            new MigrationStep(Version.of(1, 7, 1), this::update1_7_1),
+            new MigrationStep(Version.of(1, 7, 2), this::update1_7_2),
+            new MigrationStep(Version.of(1, 7, 3), this::update1_7_3),
+            new MigrationStep(Version.of(1, 9, 4), this::update1_9_4),
+            new MigrationStep(Version.of(1, 9, 5), this::update1_9_5),
+            new MigrationStep(Version.of(1, 11, 0), () -> {})
+        );
     }
 
-    private void update13_14() {
-
-        log.info("Updating database from 1.9.5 to 1.11.0");
-        globalSQL.update("UPDATE unique_data SET data_value='1.11.0' WHERE data_key='version';");
-    }
-
-    private void update12_13() {
-
-        log.info("Updating database from 1.9.4 to 1.9.5");
-
+    private void update1_9_5() {
         //add the new fields isPublic, playerBuilt and timeAdded to the buildings database
         globalSQL.update("ALTER TABLE buildings ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN player_built BOOLEAN NOT NULL DEFAULT TRUE, ADD COLUMN time_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;");
 
@@ -232,26 +108,18 @@ public class DatabaseUpdates {
                 log.warning("Failed to convert coordinates for building " + id);
             }
         }
-
-        globalSQL.update("UPDATE unique_data SET data_value='1.9.5' WHERE data_key='version';");
     }
 
 
-    private void update12_11() {
-        log.info("Updating database from 1.7.3 to 1.9.4");
-
+    private void update1_9_4() {
         // Remove the type column from server_events and join_events.
         globalSQL.update("ALTER TABLE server_events DROP COLUMN type;");
         globalSQL.update("ALTER TABLE join_events DROP COLUMN type;");
 
         globalSQL.update("ALTER TABLE player_data ADD COLUMN display_name TEXT NULL DEFAULT NULL;");
-
-        globalSQL.update("UPDATE unique_data SET data_value='1.9.4' WHERE data_key='version';");
     }
 
-    private void update10_11() {
-        log.info("Updating database from 1.7.2 to 1.7.3");
-
+    private void update1_7_3() {
         // Create a copy of the plot corners table, so we can migrate the data without effecting functionality.
         // Then clear the existing table.
         plotSQL.update("CREATE TABLE old_plot_corners AS SELECT * FROM plot_corners;");
@@ -281,15 +149,9 @@ public class DatabaseUpdates {
             }
             log.info("Migrated all plot corners to Earth location.");
         }
-
-        // Version 1.7.3
-        globalSQL.update("UPDATE unique_data SET data_value='1.7.3' WHERE data_key='version';");
     }
 
-    private void update9_10() {
-
-        log.info("Updating database from 1.7.1 to 1.7.2");
-
+    private void update1_7_2() {
         plotSQL.update("ALTER TABLE plot_data MODIFY status ENUM('unclaimed','claimed','submitted','completed','deleted') NOT NULL");
 
         // Migrate existing data from accept_data and deny_data to the new plot_review table.
@@ -324,39 +186,18 @@ public class DatabaseUpdates {
         plotSQL.update("RENAME TABLE accept_data TO old_accept_data;");
         plotSQL.update("RENAME TABLE deny_data TO old_deny_data;");
         plotSQL.update("RENAME TABLE plot_submissions TO old_plot_submissions");
-
-        // Version 1.7.2
-        globalSQL.update("UPDATE unique_data SET data_value='1.7.2' WHERE data_key='version';");
     }
 
-    private void update8_9() {
-
-        log.info("Updating database from 1.7.0 to 1.7.1");
-
-        // Add pinned column in region_members.
+    private void update1_7_1() {
         plotSQL.update("ALTER TABLE plot_members ADD COLUMN inactivity_notice TINYINT(1) NOT NULL DEFAULT 0;");
-
-        // Version 1.7.1
-        globalSQL.update("UPDATE unique_data SET data_value='1.7.1' WHERE data_key='version';");
-
     }
 
-    private void update7_8() {
-
-        log.info("Updating database from 1.6.0 to 1.7.0");
-
-        // Add pinned column in region_members.
+    private void update1_7_0() {
+        // Add a pinned column in region_members.
         regionSQL.update("ALTER TABLE region_members ADD COLUMN pinned TINYINT(1) NOT NULL DEFAULT 0;");
-
-        // Version 1.7.0
-        globalSQL.update("UPDATE unique_data SET data_value='1.7.0' WHERE data_key='version';");
-
     }
 
-    private void update6_7() {
-
-        log.info("Updating database from 1.5.0 to 1.6.0");
-
+    private void update1_6_0() {
         // Remove online users table.
         globalSQL.update("DROP TABLE online_users;");
 
@@ -373,30 +214,14 @@ public class DatabaseUpdates {
 
         // Add chat_channel column in player_data.
         globalSQL.update("ALTER TABLE player_data ADD COLUMN chat_channel VARCHAR(64) NOT NULL DEFAULT 'global';");
-
-        // Version 1.6.0
-        globalSQL.update("UPDATE unique_data SET data_value='1.6.0' WHERE data_key='version';");
-
     }
 
-    private void update5_6() {
-
-        log.info("Updating database from 1.4.4 to 1.5.0");
-
+    private void update1_5_0() {
         // Update column in plot_data to add a coordinate_id with foreign key.
         plotSQL.update("ALTER TABLE plot_data ADD COLUMN coordinate_id INT NOT NULL DEFAULT 0;");
-
-        // Version 1.5.0
-        globalSQL.update("UPDATE unique_data SET data_value='1.5.0' WHERE data_key='version';");
     }
 
-    private void update4_5() {
-
-        log.info("Updating database from 1.3.0 to 1.4.4");
-
-        // Version 1.4.4
-        globalSQL.update("UPDATE unique_data SET data_value='1.4.4' WHERE data_key='version';");
-
+    private void update1_4_4() {
         // Update column in location_data for the new subcategory id as int.
         globalSQL.update("UPDATE location_data SET subcategory=NULL;");
         globalSQL.update("ALTER TABLE location_data MODIFY subcategory INT NULL DEFAULT NULL;");
@@ -411,37 +236,17 @@ public class DatabaseUpdates {
         globalSQL.update("ALTER TABLE location_requests ADD CONSTRAINT fk_location_requests_2 FOREIGN KEY (subcategory) REFERENCES location_subcategory(id);");
     }
 
-    private void update3_4() {
-
-        log.info("Updating database from 1.2.0 to 1.3.0");
-
-        // Version 1.3.0.
-        globalSQL.update("UPDATE unique_data SET data_value='1.3.0' WHERE data_key='version';");
-
+    private void update1_3_0() {
         // Add tips_enabled to the player_data table.
         globalSQL.update("ALTER TABLE player_data ADD COLUMN tips_enabled TINYINT(1) NOT NULL DEFAULT 1;");
-
     }
 
-    private void update2_3() {
-
-        log.info("Updating database from 1.1.0 to 1.2.0");
-
-        // Version 1.2.0.
-        globalSQL.update("UPDATE unique_data SET data_value='1.2.0' WHERE data_key='version';");
-
+    private void update1_2_0() {
         // Add applicant to list of builder roles.
         globalSQL.update("ALTER TABLE player_data MODIFY builder_role ENUM('default','applicant','apprentice','jrbuilder','builder','architect','reviewer') DEFAULT 'default'");
-
     }
 
-    private void update1_2() {
-
-        log.info("Updating database from 1.0.0 to 1.1.0");
-
-        // Version 1.1.0.
-        globalSQL.getString("UPDATE unique_data SET data_value='1.1.0' WHERE data_key='version';");
-
+    private void update1_1_0() {
         // Add skin texture id column.
         globalSQL.update("ALTER TABLE player_data ADD COLUMN player_skin TEXT NULL DEFAULT NULL;");
 
@@ -472,6 +277,72 @@ public class DatabaseUpdates {
         globalSQL.update("ALTER TABLE server_switch ADD fk_server_switch_2 FOREIGN KEY (from_server) REFERENCES server_data(name);");
         globalSQL.update("ALTER TABLE server_switch ADD fk_server_switch_3 FOREIGN KEY (to_server) REFERENCES server_data(name);");
         globalSQL.update("ALTER TABLE coordinates ADD fk_coordinates_1 FOREIGN KEY (server) REFERENCES server_data(name);");
+    }
 
+    private class MigrationStep {
+        @Getter
+        private final Version targetVersion;
+        private final Runnable migration;
+
+        private MigrationStep(Version targetVersion, Runnable migration) {
+            this.targetVersion = targetVersion;
+            this.migration = migration;
+        }
+
+        private Version migrate(Version currentVersion) {
+            log.info("Migrating database from version " + currentVersion + " to version " + targetVersion);
+
+            migration.run();
+
+            globalSQL.update("UPDATE unique_data SET data_value='" + targetVersion + "' WHERE data_key='version';");
+            return targetVersion;
+        }
+    }
+
+    private record Version(int major, int minor, int patch) implements Comparable<Version> {
+
+        private static Version of(int major, int minor, int patch) {
+            return new Version(major, minor, patch);
+        }
+
+        private static Version parse(String version) {
+            String[] parts = version == null ? new String[0] : version.trim().split("\\.");
+            int major = parts.length > 0 ? parsePart(parts[0]) : 0;
+            int minor = parts.length > 1 ? parsePart(parts[1]) : 0;
+            int patch = parts.length > 2 ? parsePart(parts[2]) : 0;
+            return new Version(major, minor, patch);
+        }
+
+        private static int parsePart(String part) {
+            try {
+                return Integer.parseInt(part);
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+
+        private boolean isLowerThan(Version other) {
+            return compareTo(other) < 0;
+        }
+
+        @Override
+        public int compareTo(Version other) {
+            int majorCompare = Integer.compare(major, other.major);
+            if (majorCompare != 0) {
+                return majorCompare;
+            }
+
+            int minorCompare = Integer.compare(minor, other.minor);
+            if (minorCompare != 0) {
+                return minorCompare;
+            }
+
+            return Integer.compare(patch, other.patch);
+        }
+
+        @Override
+        public @NotNull String toString() {
+            return major + "." + minor + "." + patch;
+        }
     }
 }
