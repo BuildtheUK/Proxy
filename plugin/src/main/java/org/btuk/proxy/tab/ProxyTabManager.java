@@ -3,7 +3,6 @@ package org.btuk.proxy.tab;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.util.GameProfile;
-import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.TabPlayer;
 
 import org.btuk.proxy.core.scheduler.Scheduler;
@@ -11,7 +10,7 @@ import org.btuk.proxy.core.tab.AbstractTabManager;
 import org.btuk.proxy.player.ProxyPlayer;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,18 +44,15 @@ public class ProxyTabManager extends AbstractTabManager {
     @Override
     public void sendTablist(User user) {
         // Player must exist.
-        if (user.getPlayer() != null) {
+        if (user.getPlayer() != null && user.getPlayer() instanceof ProxyPlayer proxyPlayer) {
             List<TabListEntry> tabListEntries = new ArrayList<>();
             tabPlayers.forEach(tabPlayer -> {
-                TabListEntry entry = createTabPlayer(user, tabPlayer);
+                TabListEntry entry = createTabPlayer(user, proxyPlayer, tabPlayer);
                 if (entry != null) {
                     tabListEntries.add(entry);
                 }
             });
-            Player player = user.getPlayer();
-            if (player instanceof ProxyPlayer proxyPlayer) {
-                proxyPlayer.getTabList().addEntries(tabListEntries);
-            }
+            proxyPlayer.getTabList().addEntries(tabListEntries);
 
             // Send header and footer.
             user.getPlayer().sendPlayerListHeaderAndFooter(HEADER, FOOTER);
@@ -87,8 +83,11 @@ public class ProxyTabManager extends AbstractTabManager {
 
     @Override
     protected void addPlayerToTabList(Player player, User user, TabPlayer tabPlayer) {
-        if (player instanceof ProxyPlayer proxyPlayer) {
-            proxyPlayer.getTabList().addEntry(createTabPlayer(user, tabPlayer));
+        if (player instanceof ProxyPlayer proxyPlayer && user.getPlayer() instanceof ProxyPlayer tabProxyPlayer) {
+            TabListEntry tabListEntry = createTabPlayer(user, tabProxyPlayer, tabPlayer);
+            if (tabListEntry != null) {
+                proxyPlayer.getTabList().addEntry(tabListEntry);
+            }
         }
     }
 
@@ -140,21 +139,16 @@ public class ProxyTabManager extends AbstractTabManager {
             .mapToLong(com.velocitypowered.api.proxy.Player::getPing).findFirst().orElse(-1);
     }
 
-    private TabListEntry createTabPlayer(User user, TabPlayer tabPlayer) {
+    private @Nullable TabListEntry createTabPlayer(User user, ProxyPlayer tabListPlayer, TabPlayer tabPlayer) {
         Optional<com.velocitypowered.api.proxy.Player> optionalPlayer = server.getAllPlayers().stream().filter(p -> p.getUniqueId().toString().equals(tabPlayer.getUuid())).findFirst();
-        Optional<com.velocitypowered.api.proxy.Player> tablistPlayer = server.getAllPlayers().stream().filter(p -> p.getUniqueId().toString().equals(user.getUuid())).findFirst();
-        if (optionalPlayer.isPresent() && tablistPlayer.isPresent()) {
-            return TabListEntry.builder()
-                .tabList(tablistPlayer.get().getTabList())
-                .gameMode(1) // All players will be shown in creative
-                .displayName(formattedName(user, tabPlayer))
-                .profile(GameProfile.forOfflinePlayer(tabPlayer.getName()).withProperties(optionalPlayer.get().getGameProfileProperties()))
-                .latency(tabPlayer.getPing())
-                .listed(true)
-                .build();
-        } else {
-            return null;
-        }
+        return optionalPlayer.map(player -> TabListEntry.builder()
+            .tabList(tabListPlayer.getTabList())
+            .gameMode(1) // All players will be shown in creative
+            .displayName(formattedName(user, tabPlayer))
+            .profile(GameProfile.forOfflinePlayer(tabPlayer.getName()).withProperties(player.getGameProfileProperties()))
+            .latency(tabPlayer.getPing())
+            .listed(true)
+            .build()).orElse(null);
     }
 
     private void updateLatency(com.velocitypowered.api.proxy.Player player, String name, int latency) {
