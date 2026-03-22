@@ -3,11 +3,15 @@ package org.btuk.proxy.tab;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.util.GameProfile;
+import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.TabPlayer;
+
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.tab.AbstractTabManager;
 import org.btuk.proxy.player.ProxyPlayer;
+
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -137,15 +141,14 @@ public class ProxyTabManager extends AbstractTabManager {
     }
 
     private TabListEntry createTabPlayer(User user, TabPlayer tabPlayer) {
-        // Find player instance of TabPlayer.
         Optional<com.velocitypowered.api.proxy.Player> optionalPlayer = server.getAllPlayers().stream().filter(p -> p.getUniqueId().toString().equals(tabPlayer.getUuid())).findFirst();
-        if (optionalPlayer.isPresent()) {
-            com.velocitypowered.api.proxy.Player player = optionalPlayer.get();
+        Optional<com.velocitypowered.api.proxy.Player> tablistPlayer = server.getAllPlayers().stream().filter(p -> p.getUniqueId().toString().equals(user.getUuid())).findFirst();
+        if (optionalPlayer.isPresent() && tablistPlayer.isPresent()) {
             return TabListEntry.builder()
-                .tabList(player.getTabList())
+                .tabList(tablistPlayer.get().getTabList())
                 .gameMode(1) // All players will be shown in creative
                 .displayName(formattedName(user, tabPlayer))
-                .profile(GameProfile.forOfflinePlayer(tabPlayer.getName()).withProperties(player.getGameProfileProperties()))
+                .profile(GameProfile.forOfflinePlayer(tabPlayer.getName()).withProperties(optionalPlayer.get().getGameProfileProperties()))
                 .latency(tabPlayer.getPing())
                 .listed(true)
                 .build();
@@ -159,7 +162,9 @@ public class ProxyTabManager extends AbstractTabManager {
     }
 
     private void updateDisplayName(com.velocitypowered.api.proxy.Player player, String name, Component displayName) {
-        player.getTabList().getEntries().stream().filter(tabListEntry -> tabListEntry.getProfile().getName().equalsIgnoreCase(name) && tabListEntry.isListed()).findFirst().ifPresent(tabListEntry -> tabListEntry.setDisplayName(displayName));
+        player.getTabList().getEntries().stream().filter(tabListEntry -> tabListEntry.getProfile().getName().equalsIgnoreCase(name) && tabListEntry.isListed()).forEach(tabListEntry -> {
+            tabListEntry.setDisplayName(displayName);
+        });
     }
 
     private Optional<TabListEntry> findTabListEntryForPlayer(Collection<TabListEntry> tabEntries, String playerName) {

@@ -26,7 +26,7 @@
 
         <networklib.version>24c3fc82f5</networklib.version>
 
-        <velocity.version>3.4.0-SNAPSHOT</velocity.version>
+        <velocity.version>3.5.0-SNAPSHOT</velocity.version>
 
         <lombok.version>1.18.34</lombok.version>
 
