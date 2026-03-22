@@ -25,7 +25,6 @@ import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.user.CoreUserManager;
 import org.btuk.proxy.core.user.User;
 
-@Log
 public abstract class AbstractTabManager implements TabManager {
 
     private final Config config;
@@ -114,14 +113,12 @@ public abstract class AbstractTabManager implements TabManager {
             // Update the display name and ping.
             int ping = findPingForPlayer(tabPlayer.getUuid());
             if (ping > -1) {
-                log.info("Updating ping for " + tabPlayer.getName() + " to " + ping);
                 currentTabPlayer.setPing(ping);
                 updatePlayerPing(currentTabPlayer.getName(), ping);
             }
             // If the primary role has changed update the players team.
             // This must happen before the tab has updated, else the sorting won't update.
             if (!tabPlayer.getPrimaryGroup().equals(currentTabPlayer.getPrimaryGroup())) {
-                log.info("Updating primary group for " + tabPlayer.getName() + " to " + tabPlayer.getPrimaryGroup());
                 currentTabPlayer.setPrimaryGroup(tabPlayer.getPrimaryGroup());
                 currentTabPlayer.setPrefix(tabPlayer.getPrefix());
                 sendAddTeam(tabPlayer);
@@ -133,10 +130,8 @@ public abstract class AbstractTabManager implements TabManager {
     @Override
     public void updatePlayerByUuid(String uuid) {
         // Find the tab player by uuid.
-        log.info("Updating tab player by uuid: " + uuid);
         TabPlayer currentTabPlayer = findTabPlayerByUuid(uuid);
         if (currentTabPlayer != null) {
-            log.info("Found tab player with uuid: " + uuid);
             updatePlayer(currentTabPlayer);
         }
     }
