@@ -1,6 +1,7 @@
 package org.btuk.proxy.core.tab;
 
 import lombok.Getter;
+import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.AddTeamEvent;
 import net.bteuk.network.lib.dto.TabPlayer;
 import net.bteuk.network.lib.utils.ChatUtils;
