@@ -1,5 +1,5 @@
 #Config version (do not update)
-version: "1.10.1-SNAPSHOT"
+version: "1.10.1"
 
 #Bot token
 token: "insert token here"
