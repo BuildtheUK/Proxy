@@ -102,8 +102,8 @@ public class AutoModConfig {
 
     private static AutoModFlagRule loadFlagRule(List<String> flaggedWords, Duration duration, Map<String, Object> punishmentMap) {
         int points = Integer.parseInt(punishmentMap.get(PUNISHMENT_POINTS_PATH).toString());
-        boolean deleteMessages = Boolean.parseBoolean(punishmentMap.get(PUNISHMENT_DELETE_MESSAGES_PATH).toString());
+        boolean deleteMessage = Boolean.parseBoolean(punishmentMap.get(PUNISHMENT_DELETE_MESSAGES_PATH).toString());
 
-        return new AutoModFlagRule(flaggedWords, points, duration, deleteMessages);
+        return new AutoModFlagRule(flaggedWords, points, duration, deleteMessage);
     }
 }

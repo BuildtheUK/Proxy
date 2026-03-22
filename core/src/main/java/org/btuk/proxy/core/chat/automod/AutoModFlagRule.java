@@ -19,4 +19,9 @@ public class AutoModFlagRule extends AutoModRule {
         this.points = points;
         this.deleteMessage = deleteMessage;
     }
+
+    @Override
+    public boolean blockMessage() {
+        return deleteMessage;
+    }
 }

@@ -32,6 +32,8 @@ public abstract class AutoModRule {
         this.duration = duration;
     }
 
+    public abstract boolean blockMessage();
+
     /**
      * Matches words against flagged words.
      *

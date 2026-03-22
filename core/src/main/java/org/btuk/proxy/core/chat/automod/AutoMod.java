@@ -88,9 +88,12 @@ public class AutoMod {
      */
     private boolean checkMessage(User user, String message) {
         Map<String, CandidateWord> candidateWords = AutoModRule.getCandidateWords(message);
-        autoModConfig.getRules().forEach(rule -> checkRule(rule, candidateWords, user, message));
+        boolean blockMessage = false;
+        for (AutoModRule rule : autoModConfig.getRules()) {
+            blockMessage |= checkRule(rule, candidateWords, user, message);
+        }
         checkUser(user);
-        return false;
+        return blockMessage;
     }
 
     /**
@@ -105,10 +108,10 @@ public class AutoMod {
         }
     }
 
-    private void checkRule(AutoModRule rule, Map<String, CandidateWord> candidateWords, User user, String message) {
+    private boolean checkRule(AutoModRule rule, Map<String, CandidateWord> candidateWords, User user, String message) {
         List<AutoModMatch> matches = rule.getMatches(candidateWords);
         if (matches.isEmpty()) {
-            return;
+            return false;
         }
         long timestamp = System.currentTimeMillis();
         switch (rule) {
@@ -116,6 +119,7 @@ public class AutoMod {
             case AutoModFlagRule flagRule -> matches.forEach(match -> user.addAutoModFlag(new AutoModFlag(flagRule, timestamp, message, match)));
             default -> log.warning(String.format("Unknown rule type: %s", rule.getClass().getSimpleName()));
         }
+        return rule.blockMessage();
     }
 
     private void muteUser(User user, Duration duration, List<AutoModMatch> matches, List<String> messages) {

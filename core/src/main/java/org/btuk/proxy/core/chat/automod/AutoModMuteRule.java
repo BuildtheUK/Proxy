@@ -10,4 +10,9 @@ public class AutoModMuteRule extends AutoModRule {
     public AutoModMuteRule(List<String> flaggedWords, Duration duration) {
         super(flaggedWords, duration);
     }
+
+    @Override
+    public boolean blockMessage() {
+        return true;
+    }
 }
