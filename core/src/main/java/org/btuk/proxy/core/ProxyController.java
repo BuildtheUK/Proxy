@@ -118,7 +118,7 @@ public class ProxyController {
         AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
         ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
 
-        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord);
+        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord, automod);
 
         ServerManager serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
 

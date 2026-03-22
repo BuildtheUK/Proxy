@@ -5,10 +5,8 @@ import java.util.List;
 
 public class AutoModMuteRule extends AutoModRule {
 
-    public static final String TYPE = "mute";
-
-    public AutoModMuteRule(List<String> flaggedWords, Duration duration) {
-        super(flaggedWords, duration);
+    public AutoModMuteRule(String id, List<String> flaggedWords, Duration duration) {
+        super(id, flaggedWords, duration);
     }
 
     @Override

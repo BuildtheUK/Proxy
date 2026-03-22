@@ -20,11 +20,14 @@ public abstract class AutoModRule {
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^\\p{L}\\p{N}]");
 
     private final Set<String> flaggedWords;
+    @Getter
+    private final String id;
 
     @Getter
     private final Duration duration;
 
-    public AutoModRule(List<String> flaggedWords, Duration duration) {
+    public AutoModRule(String id, List<String> flaggedWords, Duration duration) {
+        this.id = id;
         this.flaggedWords = flaggedWords.stream()
             .map(AutoModRule::normalize)
             .filter(word -> !word.isBlank())

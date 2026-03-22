@@ -8,8 +8,10 @@ import net.kyori.adventure.text.Component;
  */
 public class AutoModFlag {
 
+    @Getter
     private final AutoModFlagRule rule;
 
+    @Getter
     private final long timestamp;
 
     @Getter

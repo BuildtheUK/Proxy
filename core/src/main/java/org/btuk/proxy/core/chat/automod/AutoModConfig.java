@@ -18,6 +18,8 @@ public class AutoModConfig {
 
     private static final String RULES_PATH = "rules";
 
+    private static final String ID_PATH = "id";
+
     private static final String FLAGGED_WORDS_PATH = "flagged_words";
 
     private static final String PUNISHMENTS_PATH = "punishment";
@@ -68,6 +70,10 @@ public class AutoModConfig {
     }
 
     private static AutoModRule loadRule(Map<String, Object> ruleMap) {
+        String id = ruleMap.get(ID_PATH).toString();
+        if (id.length() > 64) {
+            throw new IllegalArgumentException(String.format("Rule ID '%s' exceeds 64 characters", id));
+        }
         Object flaggedWordsObject = ruleMap.get(FLAGGED_WORDS_PATH);
         Object punishmentObject = ruleMap.get(PUNISHMENTS_PATH);
         Map<String, Object> punishmentMap = YamlConfigurationFile.getMap(punishmentObject);
@@ -88,10 +94,10 @@ public class AutoModConfig {
 
         switch (type) {
             case MUTE -> {
-                return new AutoModMuteRule(flaggedWords, duration);
+                return new AutoModMuteRule(id, flaggedWords, duration);
             }
             case FLAG -> {
-                return loadFlagRule(flaggedWords, duration, punishmentMap);
+                return loadFlagRule(id, flaggedWords, duration, punishmentMap);
             }
             default -> {
                 log.warning(String.format("Unknown punishment type: %s", punishmentType));
@@ -100,10 +106,10 @@ public class AutoModConfig {
         }
     }
 
-    private static AutoModFlagRule loadFlagRule(List<String> flaggedWords, Duration duration, Map<String, Object> punishmentMap) {
+    private static AutoModFlagRule loadFlagRule(String id, List<String> flaggedWords, Duration duration, Map<String, Object> punishmentMap) {
         int points = Integer.parseInt(punishmentMap.get(PUNISHMENT_POINTS_PATH).toString());
         boolean deleteMessage = Boolean.parseBoolean(punishmentMap.get(PUNISHMENT_DELETE_MESSAGES_PATH).toString());
 
-        return new AutoModFlagRule(flaggedWords, points, duration, deleteMessage);
+        return new AutoModFlagRule(id, flaggedWords, points, duration, deleteMessage);
     }
 }

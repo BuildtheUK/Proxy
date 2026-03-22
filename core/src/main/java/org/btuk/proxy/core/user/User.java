@@ -11,7 +11,12 @@ import net.bteuk.network.lib.dto.UserConnectRequest;
 import net.bteuk.network.lib.enums.ChatChannels;
 import net.bteuk.network.lib.utils.ChatUtils;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.chat.automod.AutoModFlag;
+import org.btuk.proxy.core.chat.automod.AutoModFlagRule;
+import org.btuk.proxy.core.chat.automod.AutoModMatch;
+import org.btuk.proxy.core.chat.automod.AutoModRule;
+import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -28,6 +33,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -151,7 +157,7 @@ public class User {
     private final Analytics analytics;
     private final Scheduler scheduler;
 
-    public User(UserConnectRequest request, GlobalSQL globalSQL, ChatHandler chatHandler, TabManager tabManager, Analytics analytics, Scheduler scheduler) {
+    public User(UserConnectRequest request, GlobalSQL globalSQL, ChatHandler chatHandler, TabManager tabManager, Analytics analytics, Scheduler scheduler, AutoMod autoMod) {
         this.uuid = request.getUuid();
         this.name = request.getName();
         this.playerSkin = request.getPlayerSkin();
@@ -166,6 +172,8 @@ public class User {
         this.lastPing = Time.currentTime();
 
         setDisplayName();
+
+        loadAutoModFlags(autoMod.getRules());
     }
 
     public void setDisplayName() {
@@ -449,9 +457,41 @@ public class User {
         }
     }
 
-    private void loadAutoModFlags() {
-        // TODO: Load active flags and delete expired flags.
-        // TODO: We can just fetch and delete all flags in the database, as we keep them in-memory while the user is stored.
+    private void loadAutoModFlags(List<AutoModRule> rules) {
+        List<AutoModFlagDTO> dtos = globalSQL.getAutoModFlags(uuid);
+        for (AutoModFlagDTO dto : dtos) {
+            AutoModRule rule = rules.stream().filter(r -> Objects.equals(r.getId(), dto.ruleId())).findFirst().orElse(null);
+            if (rule instanceof AutoModFlagRule flagRule) {
+                AutoModFlag flag = new AutoModFlag(flagRule, dto.timestamp(), dto.message(), new AutoModMatch(dto.messageWord(), dto.flaggedWord()));
+                if (!flag.isExpired()) {
+                    autoModFlags.add(flag);
+                }
+            } else {
+                log.warning("AutoModFlagRule not found for id: " + dto.ruleId());
+            }
+        }
+        // After loading, we can clear the database entries for this user as they are now in-memory.
+        globalSQL.update("DELETE FROM automod_flags WHERE uuid='" + uuid + "';");
+    }
+
+    public void saveAutoModFlags() {
+        removeExpiredAutoModFlags();
+        if (autoModFlags.isEmpty()) {
+            globalSQL.update("DELETE FROM automod_flags WHERE uuid='" + uuid + "';");
+            return;
+        }
+
+        List<AutoModFlagDTO> flags = new ArrayList<>();
+        for (AutoModFlag flag : autoModFlags) {
+            flags.add(new AutoModFlagDTO(
+                    flag.getRule().getId(),
+                    flag.getTimestamp(),
+                    flag.getMessage(),
+                    flag.getMatch().messageWord(),
+                    flag.getMatch().flaggedWord()
+            ));
+        }
+        globalSQL.saveAutoModFlags(uuid, flags);
     }
 
     private static JsonNode getJsonNodeFromUrl(URL url) throws IOException {

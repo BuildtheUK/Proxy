@@ -7,15 +7,13 @@ import java.util.List;
 
 public class AutoModFlagRule extends AutoModRule {
 
-    public static final String TYPE = "flag";
-
     @Getter
     private final int points;
 
     private final boolean deleteMessage;
 
-    public AutoModFlagRule(List<String> flaggedWords, int points, Duration duration, boolean deleteMessage) {
-        super(flaggedWords, duration);
+    public AutoModFlagRule(String id, List<String> flaggedWords, int points, Duration duration, boolean deleteMessage) {
+        super(id, flaggedWords, duration);
         this.points = points;
         this.deleteMessage = deleteMessage;
     }

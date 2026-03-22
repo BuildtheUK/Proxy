@@ -28,6 +28,7 @@ import java.awt.Color;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.chat.ChatHandler;
@@ -75,7 +76,9 @@ public class UserManager {
 
     private final Discord discord;
 
-    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord) {
+    private final AutoMod autoMod;
+
+    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord, AutoMod autoMod) {
         this.coreUserManager = coreUserManager;
         this.chatHandler = chatHandler;
         this.tabManager = tabManager;
@@ -88,6 +91,7 @@ public class UserManager {
         this.playerManager = playerManager;
         this.analytics = analytics;
         this.discord = discord;
+        this.autoMod = autoMod;
         initOnlineTracker();
     }
 
@@ -293,7 +297,7 @@ public class UserManager {
         } else {
 
             // Add user.
-            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler);
+            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler, autoMod);
             coreUserManager.addUser(user);
 
             if (!globalSQL.hasRow("SELECT uuid FROM player_data WHERE uuid='" + request.getUuid() + "';")) {
@@ -469,7 +473,7 @@ public class UserManager {
         UserRemove userRemoveEvent = new UserRemove(user.getUuid());
 
         // Store the auto mod status for this player.
-        // TODO: IMPLEMENT
+        user.saveAutoModFlags();
 
         chatHandler.handle(userRemoveEvent);
         if (!shutdown) {

@@ -59,6 +59,10 @@ public class AutoMod {
         this.autoModConfig.loadRules();
     }
 
+    public List<AutoModRule> getRules() {
+        return autoModConfig.getRules();
+    }
+
     /**
      * Moderates a chat message based on the configured rules.
      *
