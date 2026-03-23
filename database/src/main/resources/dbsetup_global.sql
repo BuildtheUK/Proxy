@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS buildings
     CONSTRAINT fk_buildings_2 FOREIGN KEY(player_id) REFERENCES player_data(uuid)
     );
 
-CREATE TABLE IF NOT EXISTS test_uknet_global.survey
+CREATE TABLE IF NOT EXISTS survey
 (
     player VARCHAR(36),
     survey_completed_at TIMESTAMP,
