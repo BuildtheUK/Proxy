@@ -371,6 +371,12 @@ public class User {
             } else {
                 return ChatUtils.error("You have already requested to teleport to %s", target.getName());
             }
+        } else if (target.isMuted(this)) {
+            return ChatUtils.error("%s currently has you muted, unable to send request.", target.getName());
+        } else if (target.isFocusEnabled()) {
+            return ChatUtils.error("%s is currently in focus mode, unable to send request.", target.getName());
+        } else if (isMuted()) {
+            return ChatUtils.error("You are currently muted, unable to send request.");
         }
         teleportRequests.add(new TeleportRequest(scheduler, this, target));
         chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), "server", ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
