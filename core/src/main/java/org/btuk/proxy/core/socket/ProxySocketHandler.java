@@ -1,25 +1,7 @@
 package org.btuk.proxy.core.socket;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.AbstractTransferObject;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.DiscordDirectMessage;
-import net.bteuk.network.lib.dto.DiscordEmbed;
-import net.bteuk.network.lib.dto.DiscordLinking;
-import net.bteuk.network.lib.dto.DiscordRole;
-import net.bteuk.network.lib.dto.FocusEvent;
-import net.bteuk.network.lib.dto.ModerationEvent;
-import net.bteuk.network.lib.dto.MuteEvent;
-import net.bteuk.network.lib.dto.PlotMessage;
-import net.bteuk.network.lib.dto.PrivateMessage;
-import net.bteuk.network.lib.dto.ReplyMessage;
-import net.bteuk.network.lib.dto.ServerShutdown;
-import net.bteuk.network.lib.dto.ServerStartup;
-import net.bteuk.network.lib.dto.SwitchServerEvent;
-import net.bteuk.network.lib.dto.UserConnectRequest;
-import net.bteuk.network.lib.dto.UserDisconnect;
-import net.bteuk.network.lib.dto.UserUpdate;
+import net.bteuk.network.lib.dto.*;
 import net.bteuk.network.lib.socket.SocketHandler;
 
 import org.btuk.proxy.core.chat.ChatManager;
@@ -72,6 +54,7 @@ public class ProxySocketHandler implements SocketHandler {
             case ServerStartup serverStart -> serverManager.addServer(serverStart);
             case ServerShutdown serverClose -> serverManager.removeServer(serverClose);
             case PlotMessage plotMessage -> userManager.sendPlotMessageToAll(plotMessage);
+            case TeleportEvent teleportEvent -> userManager.handleTeleportEvent(teleportEvent);
             default ->
                 log.warning("Socket object has an unrecognised type: " + abstractTransferObject.getClass().getTypeName());
         }

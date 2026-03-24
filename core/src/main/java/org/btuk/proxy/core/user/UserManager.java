@@ -2,21 +2,9 @@ package org.btuk.proxy.core.user;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.FocusEvent;
-import net.bteuk.network.lib.dto.MuteEvent;
-import net.bteuk.network.lib.dto.OnlineUser;
-import net.bteuk.network.lib.dto.OnlineUserAdd;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-import net.bteuk.network.lib.dto.PlotMessage;
-import net.bteuk.network.lib.dto.SwitchServerEvent;
-import net.bteuk.network.lib.dto.UserConnectReply;
-import net.bteuk.network.lib.dto.UserConnectRequest;
-import net.bteuk.network.lib.dto.UserDisconnect;
-import net.bteuk.network.lib.dto.UserRemove;
-import net.bteuk.network.lib.dto.UserUpdate;
+import net.bteuk.network.lib.dto.*;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -421,6 +409,32 @@ public class UserManager {
         );
     }
 
+    public void handleTeleportEvent(TeleportEvent teleportEvent) {
+        User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
+        User target = coreUserManager.getUserByUuid(teleportEvent.getTarget());
+        if (requester == null || !requester.isOnline()) {
+            if (teleportEvent.getType() == TeleportRequestType.ACCEPT || teleportEvent.getType() == TeleportRequestType.DENY) {
+                chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), "server", ChatUtils.error("The player is not online."), false));
+            } else {
+                log.severe("No user found for teleport requester " + teleportEvent.getRequester() + "!");
+            }
+            return;
+        } else if (target == null || !target.isOnline()) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), "server", ChatUtils.error("The player you are trying to teleport to is not online."), false));
+            return;
+        }
+
+        Component response = switch (teleportEvent.getType()) {
+            case REQUEST -> requester.teleportRequest(target);
+            case ACCEPT -> requester.acceptTeleportRequest(target);
+            case DENY -> requester.denyTeleportRequest(target);
+        };
+        String responseRecipient = teleportEvent.getType() == TeleportRequestType.REQUEST ? requester.getUuid() : target.getUuid();
+        DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), responseRecipient, "server", response, false);
+
+        chatHandler.handle(directMessage);
+    }
+
     private void initOnlineTracker() {
         scheduler.createRepeatingTask(() -> {
             playerManager.getPlayers().forEach(player -> {
@@ -460,6 +474,9 @@ public class UserManager {
 
         // Remove all plot, zone and region invites sent and received.
         removeInvites(user.getUuid());
+
+        // Remove all teleport requests sent to and from this user.
+        removeTeleportRequests(user);
 
         // Remove the user from the list.
         coreUserManager.removeUser(user);
@@ -563,5 +580,12 @@ public class UserManager {
         user.setTipsEnabled(disconnect.getTipsEnabled());
         user.setChatChannel(disconnect.getChatChannel());
         user.setTeleportEnabled(disconnect.getTeleportEnabled());
+    }
+
+    private void removeTeleportRequests(User user) {
+        coreUserManager.runForEach(otherUser -> {
+            otherUser.cancelTeleportRequestTo(user);
+        });
+        user.cancelTeleportRequests();
     }
 }

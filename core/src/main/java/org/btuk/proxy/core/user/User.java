@@ -6,10 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.DirectMessage;
+import net.bteuk.network.lib.dto.TeleportEvent;
 import net.bteuk.network.lib.dto.UserConnectReply;
 import net.bteuk.network.lib.dto.UserConnectRequest;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
+
+import org.btuk.proxy.core.utils.TeleportRequest;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -26,8 +30,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -139,7 +145,7 @@ public class User {
     @Setter
     private long lastPing;
 
-//    private List<TeleportRequest> teleportRequests = new ArrayList<>();
+    private List<TeleportRequest> teleportRequests = new ArrayList<>();
 
     private final ChatHandler chatHandler;
     private final TabManager tabManager;
@@ -356,27 +362,64 @@ public class User {
         }
     }
 
-//    public Component teleportRequest(UUID requester) {
-//        if (teleportRequests.stream().noneMatch(request -> request.getRequester().equals(requester))) {
-//            return ChatUtils.error("You have already requested a teleport to this player");
-//        } else {
-//            TeleportRequest request = new TeleportRequest(this, requester);
-//            teleportRequests.add(request);
-//            return ChatUtils.success("Teleport request sent to %s", displayName);
-//        }
-//    }
-//
-//    public Component denyTeleportRequest(UUID requester) {
-//        TeleportRequest request = teleportRequests.stream().filter(teleportRequest -> teleportRequest.getRequester().equals(requester)).findFirst().orElse(null);
-//        if (request == null) {
-//            return ChatUtils.error("You have not requested a teleport to %s", displayName);
-//        }
-//        return ChatUtils.success("Teleport request denied to %s", displayName);
-//    }
-//
-//    public void removeTeleportRequest(UUID id) {
-//        teleportRequests.removeIf(request -> request.getId().equals(id));
-//    }
+    public Component teleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            if (teleportRequest.isDenied()) {
+                return ChatUtils.error("%s has denied your previous teleport request, please wait before requesting again.", target.getName());
+            } else {
+                return ChatUtils.error("You have already requested to teleport to %s", target.getName());
+            }
+        }
+        teleportRequests.add(new TeleportRequest(scheduler, this, target));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), "server", ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
+        return ChatUtils.success("Requested to teleport to %s.", target.getDisplayName());
+    }
+
+    public Component acceptTeleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            teleportRequest.acceptRequest();
+            TeleportEvent event = new TeleportEvent(this.uuid, target.getUuid(), TeleportRequestType.ACCEPT);
+            chatHandler.handle(event);
+            return ChatUtils.success("Accepted teleport request from %s.", name);
+        } else {
+            return ChatUtils.error("There is no active teleport request from %s.", name);
+        }
+    }
+
+    public Component denyTeleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            teleportRequest.denyRequest();
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), "server", ChatUtils.error("%s has denied your teleport request.", target.getName()), false));
+            return ChatUtils.success("Denied teleport request from %s.", name);
+        } else {
+            return ChatUtils.error("There is no active teleport request from %s.", name);
+        }
+    }
+
+    public void removeTeleportRequest(UUID id, User target, boolean notifyRequester) {
+        teleportRequests.removeIf(request -> request.getId().equals(id));
+        if (notifyRequester && isOnline()) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your teleport request to %s has timed out.", target.getName()), false));
+        }
+    }
+
+    public void cancelTeleportRequestTo(User user) {
+        teleportRequests.stream().filter(request -> request.getTarget().equals(user)).findFirst().ifPresent(request -> {
+            request.cancel();
+            teleportRequests.remove(request);
+        });
+    }
+
+    public void cancelTeleportRequests() {
+        teleportRequests.forEach(TeleportRequest::cancel);
+        teleportRequests.clear();
+    }
 
     private String getChatChannel() {
         return globalSQL.getString("SELECT chat_channel FROM player_data WHERE uuid='" + uuid + "';");

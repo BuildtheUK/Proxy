@@ -1,26 +1,35 @@
 package org.btuk.proxy.core.utils;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import org.btuk.proxy.core.scheduler.ScheduledTask;import org.btuk.proxy.core.user.User;
+import org.btuk.proxy.core.scheduler.ScheduledTask;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.scheduler.TaskStatus;
+import org.btuk.proxy.core.user.User;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a teleport request from a player to another player.
  */
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class TeleportRequest {
+
+    private final Scheduler scheduler;
 
     /**
      * ID of the request.
      */
     @Getter
+    @EqualsAndHashCode.Include
     private final UUID id;
 
     /**
-     * UUID of the requester.
+     * UUID of the target player.
      */
     @Getter
-    private final UUID requester;
+    private final User target;
 
     private final User user;
 
@@ -35,23 +44,29 @@ public class TeleportRequest {
     @Getter
     private boolean denied = false;
 
-    public TeleportRequest(User user, UUID requester) {
+    public TeleportRequest(Scheduler scheduler, User user, User target) {
+        this.scheduler = scheduler;
         this.id = UUID.randomUUID();
         this.user = user;
-        this.requester = requester;
-        //this.timeoutTask = Proxy.getInstance().getServer().getScheduler().buildTask(Proxy.getInstance(), () -> user.removeTeleportRequest(this.id)).delay(5, TimeUnit.MINUTES).schedule();
+        this.target = target;
+        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.target, true),5, TimeUnit.MINUTES);
     }
 
     public void cancel() {
-        if (timeoutTask != null) {
+        if (timeoutTask != null && timeoutTask.getStatus() == TaskStatus.SCHEDULED) {
             timeoutTask.cancel();
         }
     }
 
+    public void acceptRequest() {
+        cancel();
+        user.removeTeleportRequest(this.id, this.target, false);
+    }
+
     public void denyRequest() {
         this.denied = true;
-        // Create a new task to remove the request from the user's list after 1 minute.
+        // Create a new task to remove the request from the user's list after 5 minutes.
         cancel();
-        //this.timeoutTask = Proxy.getInstance().getServer().getScheduler().buildTask(Proxy.getInstance(), () -> user.removeTeleportRequest(this.id)).delay(1, TimeUnit.MINUTES).schedule();
+        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.target, false), 5, TimeUnit.MINUTES);
     }
 }
