@@ -13,6 +13,7 @@ import net.bteuk.network.lib.enums.ChatChannels;
 import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
 
+import org.btuk.proxy.core.exceptions.ServerNotFoundException;
 import org.btuk.proxy.core.utils.TeleportRequest;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
@@ -389,7 +390,12 @@ public class User {
             TeleportRequest teleportRequest = optionalRequest.get();
             teleportRequest.acceptRequest();
             TeleportEvent event = new TeleportEvent(this.uuid, target.getUuid(), TeleportRequestType.ACCEPT);
-            chatHandler.handle(event);
+            try {
+                chatHandler.handle(event, this.server);
+            } catch (ServerNotFoundException e) {
+                log.severe("Server: " + this.server + " not found for teleport event, even though it's set for this user: " + this.name);
+                return ChatUtils.error("An error occurred, please contact a server administrator.");
+            }
             return ChatUtils.success("Accepted teleport request from %s.", name);
         } else {
             return ChatUtils.error("There is no active teleport request from %s.", name);
