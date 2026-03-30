@@ -53,4 +53,9 @@ public class ProxyServer implements Server {
     public long getLastPing() {
         return lastPing;
     }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof ProxyServer && ((ProxyServer) other).server.equals(server);
+    }
 }
