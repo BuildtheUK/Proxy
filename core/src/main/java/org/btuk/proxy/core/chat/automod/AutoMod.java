@@ -57,6 +57,7 @@ public class AutoMod {
         this.tabManager = tabManager;
         this.autoModConfig = new AutoModConfig(autoModConfig);
         this.autoModConfig.loadRules();
+        log.info("Auto-moderation rules loaded.");
     }
 
     public List<AutoModRule> getRules() {
@@ -77,6 +78,9 @@ public class AutoMod {
         User user = userManager.getUserByUuid(sender);
         if (user == null) {
             return true;
+        }
+        if (user.isMuted()) {
+            return false;
         }
         user.removeExpiredAutoModFlags();
         String message = SERIALIZER.serialize(messageComponent);
@@ -108,7 +112,16 @@ public class AutoMod {
     private void checkUser(User user) {
         if (user.getAutoModFlagPoints() > autoModConfig.getPointsThreshold()) {
             List<AutoModFlag> flags = user.getAutoModFlags();
-            muteUser(user, FLAG_MUTE_DURATION, flags.stream().map(AutoModFlag::getMatch).toList(), flags.stream().map(AutoModFlag::getMessage).distinct().toList());
+            muteUser(user, FLAG_MUTE_DURATION, flags.stream().map(AutoModFlag::getMatch).toList(), flags.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    AutoModFlag::getTimestamp,
+                    AutoModFlag::getMessage,
+                    (first, second) -> first,
+                    java.util.LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .toList());
         }
     }
 
@@ -117,10 +130,13 @@ public class AutoMod {
         if (matches.isEmpty()) {
             return false;
         }
+        log.info(String.format("Message flagged by rule %s: %s", rule.getId(), message));
         long timestamp = System.currentTimeMillis();
         switch (rule) {
-            case AutoModMuteRule muteRule -> muteUser(user, muteRule.getDuration(), matches, Collections.singletonList(message));
-            case AutoModFlagRule flagRule -> matches.forEach(match -> user.addAutoModFlag(new AutoModFlag(flagRule, timestamp, message, match)));
+            case AutoModMuteRule muteRule ->
+                muteUser(user, muteRule.getDuration(), matches, Collections.singletonList(message));
+            case AutoModFlagRule flagRule ->
+                matches.forEach(match -> user.addAutoModFlag(new AutoModFlag(flagRule, timestamp, message, match)));
             default -> log.warning(String.format("Unknown rule type: %s", rule.getClass().getSimpleName()));
         }
         return rule.blockMessage();

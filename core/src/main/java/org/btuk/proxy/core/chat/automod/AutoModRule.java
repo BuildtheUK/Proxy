@@ -104,4 +104,9 @@ public abstract class AutoModRule {
             .replace('7', 't')
             .trim();
     }
+
+    @Override
+    public String toString() {
+        return String.format("AutoModRule: %s, id: %s", getClass().getSimpleName(), id);
+    }
 }

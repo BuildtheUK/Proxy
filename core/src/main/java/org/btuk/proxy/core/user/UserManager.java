@@ -2,21 +2,9 @@ package org.btuk.proxy.core.user;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.FocusEvent;
-import net.bteuk.network.lib.dto.MuteEvent;
-import net.bteuk.network.lib.dto.OnlineUser;
-import net.bteuk.network.lib.dto.OnlineUserAdd;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-import net.bteuk.network.lib.dto.PlotMessage;
-import net.bteuk.network.lib.dto.SwitchServerEvent;
-import net.bteuk.network.lib.dto.UserConnectReply;
-import net.bteuk.network.lib.dto.UserConnectRequest;
-import net.bteuk.network.lib.dto.UserDisconnect;
-import net.bteuk.network.lib.dto.UserRemove;
-import net.bteuk.network.lib.dto.UserUpdate;
+import net.bteuk.network.lib.dto.*;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.ModerationAction;
 import net.bteuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -423,6 +411,21 @@ public class UserManager {
                 }
             )
         );
+    }
+
+    public void handleModerationEvent(ModerationEvent moderationEvent) {
+        tabManager.updatePlayerByUuid(moderationEvent.getUuid());
+
+        // For an unmute-event remove their flagged words, else they'll just get auto-muted next time they speak.
+        if (moderationEvent.getModerationAction() == ModerationAction.UNMUTE) {
+            User user = coreUserManager.getUserByUuid(moderationEvent.getUuid());
+            if (user == null) {
+                // Clear directly from the database.
+                globalSQL.update("DELETE FROM automod_flags WHERE uuid='" + moderationEvent.getUuid() + "';");
+            } else {
+                user.getAutoModFlags().clear();
+            }
+        }
     }
 
     private void initOnlineTracker() {

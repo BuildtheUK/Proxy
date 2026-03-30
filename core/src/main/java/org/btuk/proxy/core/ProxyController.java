@@ -138,9 +138,6 @@ public class ProxyController {
         if (started) {
             // Show the disconnect message for all players in discord.
             if (discord != null) {
-                // Get start time.
-                long startTime = System.currentTimeMillis();
-                long currentTime = System.currentTimeMillis();
                 AtomicInteger users = new AtomicInteger((int) coreUserManager.countOnlineUsers());
                 CountDownLatch disconnectLatch = new CountDownLatch(users.get());
 

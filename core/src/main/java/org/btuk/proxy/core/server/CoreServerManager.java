@@ -2,6 +2,7 @@ package org.btuk.proxy.core.server;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface CoreServerManager {
 
@@ -9,7 +10,7 @@ public interface CoreServerManager {
 
     Optional<Server> getServer(String name);
 
-    List<Server> getServers();
+    Set<Server> getServers();
 
     List<Server> getOnlineServers();
 

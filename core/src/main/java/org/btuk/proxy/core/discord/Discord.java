@@ -426,7 +426,7 @@ public class Discord {
         String message = String.format("User %s has been muted by the auto-moderator for %s, please evaluate this decision and update the punishment if necessary. You can update the punishment by running the /mute command again.", mutedUser.getName(), durationMessage);
         message += String.format("\n\nUser uuid: %s", mutedUser.getUuid());
         message += "\n\nFlagged words:\n";
-        message += String.join(",", matches.stream().map(AutoModMatch::messageWord).toList());
+        message += String.join(", ", matches.stream().map(AutoModMatch::messageWord).toList());
         message = messageLimit(message);
 
         String attachmentContent = buildAutoMuteAttachment(matches, messages);
