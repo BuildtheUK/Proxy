@@ -71,6 +71,13 @@ public abstract class AutoModRule {
         Matcher chunkMatcher = NON_WHITESPACE_PATTERN.matcher(message);
         while (chunkMatcher.find()) {
             String originalChunk = chunkMatcher.group();
+
+            // Plain alphanumeric words are already handled by TOKEN_PATTERN,
+            // so only process chunks that contain punctuation/symbols.
+            if (originalChunk.chars().allMatch(Character::isLetterOrDigit)) {
+                continue;
+            }
+
             String normalizedChunk = NON_ALPHANUMERIC.matcher(normalize(originalChunk)).replaceAll("");
 
             addCandidate(candidates, normalizedChunk, originalChunk);
