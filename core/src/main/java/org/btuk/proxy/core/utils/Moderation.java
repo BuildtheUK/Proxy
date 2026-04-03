@@ -17,7 +17,7 @@ public class Moderation {
         if (isMuted(uuid)) {
             globalSQL.update("UPDATE moderation SET end_time=" + time + " WHERE uuid='" + uuid + "' AND end_time>" + time + " AND type='mute';");
         }
-        globalSQL.update("INSERT INTO moderation(uuid,start_time,end_time,reason,type) VALUES('" + uuid + "'," + time + "," + end_time + ",'" + reason + "','mute');");
+        globalSQL.insertModeration(uuid, time, end_time, reason, "mute");
     }
 
     // If the player is currently muted, return true.

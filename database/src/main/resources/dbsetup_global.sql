@@ -260,5 +260,6 @@ CREATE TABLE IF NOT EXISTS automod_flags
     message_word    VARCHAR(256)    NOT NULL,
     flagged_word    VARCHAR(256)    NOT NULL,
     PRIMARY KEY(id),
-    CONSTRAINT fk_automod_flags_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid)
+    CONSTRAINT fk_automod_flags_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid),
+    INDEX idx_automod_flags_1 (uuid)
 );

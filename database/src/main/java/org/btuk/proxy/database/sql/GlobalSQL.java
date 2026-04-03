@@ -177,4 +177,28 @@ public class GlobalSQL extends AbstractSQL {
         }
         return flags;
     }
+
+    public void insertModeration(String uuid, long startTime, long endTime, String reason, String type) {
+        if (uuid == null || reason == null || type == null) {
+            log.warning("insertModeration called with null argument(s)");
+            return;
+        }
+
+        final String sql = """
+                INSERT INTO moderation(uuid, start_time, end_time, reason, type)
+                VALUES(?, ?, ?, ?, ?)
+                """;
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, uuid);
+            statement.setLong(2, startTime);
+            statement.setLong(3, endTime);
+            statement.setString(4, reason);
+            statement.setString(5, type);
+
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            log.severe("Failed to insert moderation record for " + uuid + ": " + e.getMessage());
+        }
+    }
 }

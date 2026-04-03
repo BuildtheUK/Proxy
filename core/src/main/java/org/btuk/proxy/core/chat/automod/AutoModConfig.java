@@ -34,6 +34,10 @@ public class AutoModConfig {
 
     private static final String PUNISHMENT_DELETE_MESSAGES_PATH = "delete_message";
 
+    private static final String FLAG_MUTE_DURATION_PATH = "flag_mute_duration";
+
+    private static final String FLAG_DELETE_MESSAGES_PATH = "flag_mute_duration_unit";
+
     private final Config config;
 
     @Getter
@@ -43,12 +47,18 @@ public class AutoModConfig {
     private final int pointsThreshold;
 
     @Getter
+    private final Duration flagMuteDuration;
+
+    @Getter
     private final List<AutoModRule> rules = new ArrayList<>();
 
     public AutoModConfig(Config config) {
         this.config = config;
         this.enabled = config.getBoolean("enabled");
         this.pointsThreshold = config.getInt("points_threshold");
+        int flagMuteDuration = config.getInt(FLAG_MUTE_DURATION_PATH);
+        String flagMuteDurationUnit = config.getString(FLAG_DELETE_MESSAGES_PATH);
+        this.flagMuteDuration = Duration.of(flagMuteDuration, ChronoUnit.valueOf(flagMuteDurationUnit.toUpperCase()));
     }
 
     public void loadRules() {

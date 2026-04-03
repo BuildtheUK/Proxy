@@ -35,8 +35,6 @@ public class AutoMod {
 
     private static final Component AUTOMOD_REASON_COMPONENT = ChatUtils.error("You have been muted by the auto-moderation system due to recent chat messages, the moderation team will evaluate this.");
 
-    private static final Duration FLAG_MUTE_DURATION = Duration.ofHours(12);
-
     private final CoreUserManager userManager;
 
     private final Moderation moderation;
@@ -112,7 +110,7 @@ public class AutoMod {
     private void checkUser(User user) {
         if (user.getAutoModFlagPoints() > autoModConfig.getPointsThreshold()) {
             List<AutoModFlag> flags = user.getAutoModFlags();
-            muteUser(user, FLAG_MUTE_DURATION, flags.stream().map(AutoModFlag::getMatch).toList(), flags.stream()
+            muteUser(user, autoModConfig.getFlagMuteDuration(), flags.stream().map(AutoModFlag::getMatch).toList(), flags.stream()
                 .collect(java.util.stream.Collectors.toMap(
                     AutoModFlag::getTimestamp,
                     AutoModFlag::getMessage,

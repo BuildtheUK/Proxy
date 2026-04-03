@@ -55,8 +55,8 @@ public class ProxyCoreServerManager implements CoreServerManager {
     }
 
     @Override
-    public List<Server> getOnlineServers() {
-        return proxy.getServer().getAllServers().stream().map(ProxyServer::new).collect(Collectors.toList());
+    public Set<Server> getOnlineServers() {
+        return proxy.getServer().getAllServers().stream().map(ProxyServer::new).collect(Collectors.toSet());
     }
 
     @Override

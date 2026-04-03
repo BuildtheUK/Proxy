@@ -12,7 +12,7 @@ public interface CoreServerManager {
 
     Set<Server> getServers();
 
-    List<Server> getOnlineServers();
+    Set<Server> getOnlineServers();
 
     void addServer(Server server);
 
