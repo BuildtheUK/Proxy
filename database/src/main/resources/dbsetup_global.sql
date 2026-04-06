@@ -249,3 +249,17 @@ CREATE TABLE IF NOT EXISTS survey
     PRIMARY KEY(player),
     CONSTRAINT fk_survey_player FOREIGN KEY(player) REFERENCES player_data(uuid)
 );
+
+CREATE TABLE IF NOT EXISTS automod_flags
+(
+    id              INT             AUTO_INCREMENT,
+    uuid            CHAR(36)        NOT NULL,
+    rule_id         VARCHAR(64)     NOT NULL,
+    flag_timestamp  BIGINT          NOT NULL,
+    message         TEXT            NOT NULL,
+    message_word    VARCHAR(256)    NOT NULL,
+    flagged_word    VARCHAR(256)    NOT NULL,
+    PRIMARY KEY(id),
+    CONSTRAINT fk_automod_flags_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid),
+    INDEX idx_automod_flags_1 (uuid)
+);

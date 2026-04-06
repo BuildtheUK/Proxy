@@ -1,8 +1,4 @@
 jdk:
   - openjdk21
-before_install:
-  - sdk install java 21.0.5-tem
-  - sdk use java 21.0.5-tem
-  - sdk install maven
 install:
-  - mvn install -Dmaven.javadoc.skip=true -DskipTests
+  - mvn install -Dmaven.javadoc.skip=true -DskipTests -pl :database,:core -am

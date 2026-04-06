@@ -70,7 +70,7 @@ public class Proxy {
     }
 
     @Subscribe
-    public void onProxyInitialization(ProxyInitializeEvent event) {
+    public void onProxyInitialization(ProxyInitializeEvent event) throws IOException {
 
         this.proxyController = new ProxyController(getDataFolder());
 

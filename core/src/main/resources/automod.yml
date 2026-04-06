@@ -1,0 +1,35 @@
+enabled: false
+points_threshold: 100
+flag_mute_duration: 6
+flag_mute_duration_unit: HOURS
+rules:
+  - id: rule1
+    flagged_words: []
+    punishment:
+      type: MUTE
+      duration: 6
+      duration_unit: HOURS
+  - id: rule2
+    flagged_words: []
+    punishment:
+      type: FLAG
+      duration: 1
+      duration_unit: DAYS
+      points: 1
+      delete_message: false
+  - id: rule3
+    flagged_words: []
+    punishment:
+      type: FLAG
+      duration: 12
+      duration_unit: HOURS
+      points: 5
+      delete_message: true
+  - id: rule4
+    flagged_words: []
+    punishment:
+      type: FLAG
+      duration: 6
+      duration_unit: HOURS
+      points: 10
+      delete_message: true
