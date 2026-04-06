@@ -5,6 +5,8 @@ import net.bteuk.network.lib.dto.DirectMessage;
 import net.bteuk.network.lib.dto.PrivateMessage;
 import net.bteuk.network.lib.dto.ReplyMessage;
 import net.bteuk.network.lib.utils.ChatUtils;
+
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -37,16 +39,19 @@ public class ChatManager {
 
     private final Moderation moderation;
 
+    private final AutoMod autoMod;
+
     private static final List<String> SERVER_USERS = List.of(new String[]{SERVER_SENDER, DISCORD_SENDER});
 
     private static final String FOCUS_ENABLED_PRESET = "%s is in focus mode, unable to send message.";
 
-    public ChatManager(ChatHandler chatHandler, CoreUserManager userManager, Analytics analytics, GlobalSQL globalSQL, Moderation moderation) {
+    public ChatManager(ChatHandler chatHandler, CoreUserManager userManager, Analytics analytics, GlobalSQL globalSQL, Moderation moderation, AutoMod autoMod) {
         this.chatHandler = chatHandler;
         this.userManager = userManager;
         this.analytics = analytics;
         this.globalSQL = globalSQL;
         this.moderation = moderation;
+        this.autoMod = autoMod;
     }
 
     /**
@@ -56,6 +61,9 @@ public class ChatManager {
      * @param chatMessage the chat message
      */
     public void handle(ChatMessage chatMessage) {
+        if (autoMod.moderate(chatMessage.getSender(), chatMessage.getComponent())) {
+            return;
+        }
         // Send a direct message to all players
         userManager.runForEach(user -> sendDirectMessage(new DirectMessage(chatMessage.getChannel(), user.getUuid(), chatMessage.getSender(), chatMessage.getComponent(), false)));
         if (!SERVER_USERS.contains(chatMessage.getSender())) {
@@ -144,6 +152,9 @@ public class ChatManager {
             if (!receiver.isOnline() && !directMessage.isOffline()) {
                 sendDirectMessage(new DirectMessage(GLOBAL.getChannelName(), directMessage.getSender(), SERVER_SENDER,
                         ChatUtils.error("%s is not online. No message sent", receiver.getName()), false));
+                return;
+            }
+            if (autoMod.moderate(directMessage.getSender(), directMessage.getComponent())) {
                 return;
             }
             // Updates both player's last messaged players.

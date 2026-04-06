@@ -187,4 +187,6 @@ public abstract class ConfigurationFile {
     public File getFile() {
         return file;
     }
+
+    public abstract List<Map<String, Object>> getList(String path);
 }

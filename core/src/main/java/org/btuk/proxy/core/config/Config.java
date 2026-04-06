@@ -3,13 +3,14 @@ package org.btuk.proxy.core.config;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class Config {
 
     private final ConfigurationFile config;
 
-    public Config(File dataFolder) throws IOException {
-        config = new YamlConfigurationFile(getClass().getClassLoader().getResourceAsStream("proxy-config.yml"), new File(dataFolder, "proxy-config.yml"));
+    public Config(File dataFolder, String fileName) throws IOException {
+        config = new YamlConfigurationFile(getClass().getClassLoader().getResourceAsStream(fileName), new File(dataFolder, fileName));
     }
 
     public String getString(String path) {
@@ -34,5 +35,9 @@ public class Config {
 
     public List<ConfigSocket> getSockets(String path) {
         return config.getSockets(path);
+    }
+
+    public List<Map<String, Object>> getList(String path) {
+        return config.getList(path);
     }
 }

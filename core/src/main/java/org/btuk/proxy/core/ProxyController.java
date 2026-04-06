@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.OnlineUserRemove;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.database.DatabaseInit;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -50,6 +51,8 @@ public class ProxyController {
 
     private boolean started = false;
 
+    private final File dataFolder;
+
     @Getter
     private final Config config;
 
@@ -71,13 +74,19 @@ public class ProxyController {
 
     private UserManager userManager;
 
+    private static final String PROXY_CONFIG_NAME = "proxy-config.yml";
+
+    private static final String AUTOMOD_CONFIG_NAME = "automod.yml";
+
     public ProxyController(File dataFolder) {
+        this.dataFolder = dataFolder;
+
         // Init logging to ensure java util logging works.
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
         try {
-            config = new Config(dataFolder);
+            config = new Config(dataFolder, PROXY_CONFIG_NAME);
             Constants.init(config);
         } catch (IOException e) {
             log.warning("An error occurred while loading the config: " + e.getMessage());
@@ -91,7 +100,7 @@ public class ProxyController {
     }
 
 
-    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) {
+    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) throws IOException {
 
         if (!enabled) {
             log.severe("Proxy is not enabled, see previous logs for errors.");
@@ -101,19 +110,22 @@ public class ProxyController {
         this.chatHandler = chatHandler;
         this.coreServerManager = coreServerManager;
 
+        this.discord = new Discord(config, globalSQL, chatHandler, scheduler);
+
         this.analytics = new Analytics(coreUserManager, globalSQL, scheduler);
         Moderation moderation = new Moderation(globalSQL);
 
-        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation);
+        AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
+        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
 
-        this.discord = new Discord(config, globalSQL, chatHandler, scheduler, chatManager, coreUserManager, tabManager, plotSQL);
-
-        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord);
+        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord, automod);
 
         ServerManager serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
 
         // Set up the review status message.
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
+
+        this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
 
         serverManager.initOnlineServers();
 
@@ -126,9 +138,6 @@ public class ProxyController {
         if (started) {
             // Show the disconnect message for all players in discord.
             if (discord != null) {
-                // Get start time.
-                long startTime = System.currentTimeMillis();
-                long currentTime = System.currentTimeMillis();
                 AtomicInteger users = new AtomicInteger((int) coreUserManager.countOnlineUsers());
                 CountDownLatch disconnectLatch = new CountDownLatch(users.get());
 

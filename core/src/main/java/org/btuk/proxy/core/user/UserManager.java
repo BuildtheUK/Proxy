@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.*;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.ModerationAction;
 import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.database.sql.GlobalSQL;
@@ -16,6 +17,7 @@ import java.awt.Color;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.chat.ChatHandler;
@@ -63,7 +65,9 @@ public class UserManager {
 
     private final Discord discord;
 
-    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord) {
+    private final AutoMod autoMod;
+
+    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord, AutoMod autoMod) {
         this.coreUserManager = coreUserManager;
         this.chatHandler = chatHandler;
         this.tabManager = tabManager;
@@ -76,6 +80,7 @@ public class UserManager {
         this.playerManager = playerManager;
         this.analytics = analytics;
         this.discord = discord;
+        this.autoMod = autoMod;
         initOnlineTracker();
     }
 
@@ -281,7 +286,7 @@ public class UserManager {
         } else {
 
             // Add user.
-            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler);
+            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler, autoMod);
             coreUserManager.addUser(user);
 
             if (!globalSQL.hasRow("SELECT uuid FROM player_data WHERE uuid='" + request.getUuid() + "';")) {
@@ -409,6 +414,21 @@ public class UserManager {
         );
     }
 
+    public void handleModerationEvent(ModerationEvent moderationEvent) {
+        tabManager.updatePlayerByUuid(moderationEvent.getUuid());
+
+        // For an unmute-event remove their flagged words, else they'll just get auto-muted next time they speak.
+        if (moderationEvent.getModerationAction() == ModerationAction.UNMUTE) {
+            User user = coreUserManager.getUserByUuid(moderationEvent.getUuid());
+            if (user == null) {
+                // Clear directly from the database.
+                globalSQL.update("DELETE FROM automod_flags WHERE uuid='" + moderationEvent.getUuid() + "';");
+            } else {
+                user.getAutoModFlags().clear();
+            }
+        }
+    }
+
     public void handleTeleportEvent(TeleportEvent teleportEvent) {
         User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
         User target = coreUserManager.getUserByUuid(teleportEvent.getTarget());
@@ -481,9 +501,12 @@ public class UserManager {
         // Remove the user from the list.
         coreUserManager.removeUser(user);
         user.delete();
-        // Remove the user from the list of muted users for all players, if they had this player muted.
+        // Remove the user from the list of muted users for all players if they had this player muted.
         coreUserManager.unmuteUser(user);
         UserRemove userRemoveEvent = new UserRemove(user.getUuid());
+
+        // Store the auto mod status for this player.
+        user.saveAutoModFlags();
 
         chatHandler.handle(userRemoveEvent);
         if (!shutdown) {

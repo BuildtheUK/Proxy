@@ -48,8 +48,7 @@ public class ProxySocketHandler implements SocketHandler {
             case SwitchServerEvent switchServerEvent -> userManager.handleSwitchServerEvent(switchServerEvent);
             case MuteEvent muteEvent -> userManager.handleMuteEvent(muteEvent);
             case
-                ModerationEvent moderationEvent -> // Currently the moderation is handled on the servers, this event is purely to update Tab for (un)muting.
-                tabManager.updatePlayerByUuid(moderationEvent.getUuid());
+                ModerationEvent moderationEvent -> userManager.handleModerationEvent(moderationEvent);
             case FocusEvent focusEvent -> userManager.handleFocusEvent(focusEvent);
             case ServerStartup serverStart -> serverManager.addServer(serverStart);
             case ServerShutdown serverClose -> serverManager.removeServer(serverClose);
