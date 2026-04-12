@@ -57,6 +57,8 @@ import org.btuk.proxy.core.utils.Analytics;
 import org.btuk.proxy.core.utils.SwitchServer;
 import org.btuk.proxy.core.utils.Time;
 
+import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
+
 /**
  * User object, stored specific information about the user.
  */
@@ -195,7 +197,7 @@ public class User {
     public Component updateDisplayName(Component newDisplayName) {
         // Assert whether the display name is valid.
         if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("Your nickname must not exceed 16 characters."), false));
             return null;
         }
         // Strip any formatting.
@@ -210,7 +212,7 @@ public class User {
 
         // Update TAB.
         tabManager.updatePlayerByUuid(uuid);
-        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Set nickname to ").append(newDisplayName), false));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.success("Set nickname to ").append(newDisplayName), false));
         return newDisplayName;
     }
 
@@ -393,7 +395,7 @@ public class User {
             return ChatUtils.error("You are currently muted, unable to send request.");
         }
         teleportRequests.add(new TeleportRequest(scheduler, this, target));
-        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), "server", ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), SERVER_SENDER, ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
         return ChatUtils.success("Requested to teleport to %s.", target.getDisplayName());
     }
 
@@ -420,7 +422,7 @@ public class User {
         if (optionalRequest.isPresent()) {
             TeleportRequest teleportRequest = optionalRequest.get();
             teleportRequest.denyRequest();
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), "server", ChatUtils.error("%s has denied your teleport request.", target.getName()), false));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("%s has denied your teleport request.", target.getName()), false));
             return ChatUtils.success("Denied teleport request from %s.", name);
         } else {
             return ChatUtils.error("There is no active teleport request from %s.", name);
@@ -430,7 +432,7 @@ public class User {
     public void removeTeleportRequest(UUID id, User target, boolean notifyRequester) {
         teleportRequests.removeIf(request -> request.getId().equals(id));
         if (notifyRequester && isOnline()) {
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your teleport request to %s has timed out.", target.getName()), false));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("Your teleport request to %s has timed out.", target.getName()), false));
         }
     }
 

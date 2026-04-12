@@ -61,12 +61,13 @@ public class ChatManager {
      * @param chatMessage the chat message
      */
     public void handle(ChatMessage chatMessage) {
-        if (autoMod.moderate(chatMessage.getSender(), chatMessage.getComponent())) {
+        boolean player = SERVER_USERS.contains(chatMessage.getSender());
+        if (player && autoMod.moderate(chatMessage.getSender(), chatMessage.getComponent())) {
             return;
         }
         // Send a direct message to all players
         userManager.runForEach(user -> sendDirectMessage(new DirectMessage(chatMessage.getChannel(), user.getUuid(), chatMessage.getSender(), chatMessage.getComponent(), false)));
-        if (!SERVER_USERS.contains(chatMessage.getSender())) {
+        if (player) {
             analytics.addMessage(chatMessage.getSender(), Time.getDate(Time.currentTime()));
         }
     }
