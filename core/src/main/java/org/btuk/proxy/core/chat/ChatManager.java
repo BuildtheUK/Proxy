@@ -61,7 +61,7 @@ public class ChatManager {
      * @param chatMessage the chat message
      */
     public void handle(ChatMessage chatMessage) {
-        boolean player = SERVER_USERS.contains(chatMessage.getSender());
+        boolean player = !SERVER_USERS.contains(chatMessage.getSender());
         if (player && autoMod.moderate(chatMessage.getSender(), chatMessage.getComponent())) {
             return;
         }
@@ -130,7 +130,6 @@ public class ChatManager {
      * @param directMessage direct message
      */
     public void handle(DirectMessage directMessage) {
-        // If the message is sent a by a player, and the recipient is in focus mode, block the message and let the sender know.
         if (!SERVER_USERS.contains(directMessage.getSender())) {
             User sender = userManager.getUserByUuid(directMessage.getSender());
             User receiver = userManager.getUserByUuid(directMessage.getRecipient());
@@ -149,7 +148,7 @@ public class ChatManager {
                         new DirectMessage(GLOBAL.getChannelName(), directMessage.getSender(), SERVER_SENDER, ChatUtils.error(FOCUS_ENABLED_PRESET, receiver.getName()), false));
                 return;
             }
-            // Checks if receiver is online, sends error if not.
+            // Checks if the receiver is online, sends an error if not.
             if (!receiver.isOnline() && !directMessage.isOffline()) {
                 sendDirectMessage(new DirectMessage(GLOBAL.getChannelName(), directMessage.getSender(), SERVER_SENDER,
                         ChatUtils.error("%s is not online. No message sent", receiver.getName()), false));
