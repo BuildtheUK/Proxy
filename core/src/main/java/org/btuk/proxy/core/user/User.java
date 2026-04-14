@@ -207,7 +207,7 @@ public class User {
         newDisplayName = newDisplayName.colorIfAbsent(NamedTextColor.WHITE);
 
         String displayName = GsonComponentSerializer.gson().serialize(newDisplayName);
-        globalSQL.update("UPDATE player_data SET display_name='" + displayName + "' WHERE uuid='" + uuid + "';");
+        globalSQL.update("UPDATE player_data SET display_name=? WHERE uuid=?;", displayName, uuid);
         this.displayName = newDisplayName;
 
         // Update TAB.
