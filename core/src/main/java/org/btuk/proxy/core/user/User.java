@@ -6,10 +6,15 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
 import net.bteuk.network.lib.dto.DirectMessage;
+import net.bteuk.network.lib.dto.TeleportEvent;
 import net.bteuk.network.lib.dto.UserConnectReply;
 import net.bteuk.network.lib.dto.UserConnectRequest;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
+
+import org.btuk.proxy.core.exceptions.ServerNotFoundException;
+import org.btuk.proxy.core.utils.TeleportRequest;
 
 import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.chat.automod.AutoModFlag;
@@ -34,8 +39,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +56,8 @@ import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.utils.Analytics;
 import org.btuk.proxy.core.utils.SwitchServer;
 import org.btuk.proxy.core.utils.Time;
+
+import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
 
 /**
  * User object, stored specific information about the user.
@@ -150,7 +159,7 @@ public class User {
     @Getter
     private final List<AutoModFlag> autoModFlags = new ArrayList<>();
 
-//    private List<TeleportRequest> teleportRequests = new ArrayList<>();
+    private List<TeleportRequest> teleportRequests = new ArrayList<>();
 
     private final ChatHandler chatHandler;
     private final TabManager tabManager;
@@ -188,7 +197,7 @@ public class User {
     public Component updateDisplayName(Component newDisplayName) {
         // Assert whether the display name is valid.
         if (PlainTextComponentSerializer.plainText().serialize(newDisplayName).length() > 16) {
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.error("Your nickname must not exceed 16 characters."), false));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("Your nickname must not exceed 16 characters."), false));
             return null;
         }
         // Strip any formatting.
@@ -198,12 +207,12 @@ public class User {
         newDisplayName = newDisplayName.colorIfAbsent(NamedTextColor.WHITE);
 
         String displayName = GsonComponentSerializer.gson().serialize(newDisplayName);
-        globalSQL.update("UPDATE player_data SET display_name='" + displayName + "' WHERE uuid='" + uuid + "';");
+        globalSQL.update("UPDATE player_data SET display_name=? WHERE uuid=?;", displayName, uuid);
         this.displayName = newDisplayName;
 
         // Update TAB.
         tabManager.updatePlayerByUuid(uuid);
-        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, "server", ChatUtils.success("Set nickname to ").append(newDisplayName), false));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.success("Set nickname to ").append(newDisplayName), false));
         return newDisplayName;
     }
 
@@ -369,6 +378,75 @@ public class User {
         }
     }
 
+    public Component teleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            if (teleportRequest.isDenied()) {
+                return ChatUtils.error("%s has denied your previous teleport request, please wait before requesting again.", target.getName());
+            } else {
+                return ChatUtils.error("You have already requested to teleport to %s", target.getName());
+            }
+        } else if (target.isMuted(this)) {
+            return ChatUtils.error("%s currently has you muted, unable to send request.", target.getName());
+        } else if (target.isFocusEnabled()) {
+            return ChatUtils.error("%s is currently in focus mode, unable to send request.", target.getName());
+        } else if (isMuted()) {
+            return ChatUtils.error("You are currently muted, unable to send request.");
+        }
+        teleportRequests.add(new TeleportRequest(scheduler, this, target));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), SERVER_SENDER, ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
+        return ChatUtils.success("Requested to teleport to %s.", target.getDisplayName());
+    }
+
+    public Component acceptTeleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            teleportRequest.acceptRequest();
+            TeleportEvent event = new TeleportEvent(this.uuid, target.getUuid(), TeleportRequestType.ACCEPT);
+            try {
+                chatHandler.handle(event, this.server);
+            } catch (ServerNotFoundException e) {
+                log.severe("Server: " + this.server + " not found for teleport event, even though it's set for this user: " + this.name);
+                return ChatUtils.error("An error occurred, please contact a server administrator.");
+            }
+            return ChatUtils.success("Accepted teleport request from %s.", name);
+        } else {
+            return ChatUtils.error("There is no active teleport request from %s.", name);
+        }
+    }
+
+    public Component denyTeleportRequest(User target) {
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+        if (optionalRequest.isPresent()) {
+            TeleportRequest teleportRequest = optionalRequest.get();
+            teleportRequest.denyRequest();
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("%s has denied your teleport request.", target.getName()), false));
+            return ChatUtils.success("Denied teleport request from %s.", name);
+        } else {
+            return ChatUtils.error("There is no active teleport request from %s.", name);
+        }
+    }
+
+    public void removeTeleportRequest(UUID id, User target, boolean notifyRequester) {
+        teleportRequests.removeIf(request -> request.getId().equals(id));
+        if (notifyRequester && isOnline()) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("Your teleport request to %s has timed out.", target.getName()), false));
+        }
+    }
+
+    public void cancelTeleportRequestTo(User user) {
+        teleportRequests.stream().filter(request -> request.getTarget().equals(user)).findFirst().ifPresent(request -> {
+            request.cancel();
+            teleportRequests.remove(request);
+        });
+    }
+
+    public void cancelTeleportRequests() {
+        teleportRequests.forEach(TeleportRequest::cancel);
+        teleportRequests.clear();
+    }
     public void addAutoModFlag(AutoModFlag flag) {
         autoModFlags.add(flag);
     }
@@ -380,28 +458,6 @@ public class User {
     public int getAutoModFlagPoints() {
         return autoModFlags.stream().mapToInt(AutoModFlag::getPoints).sum();
     }
-
-//    public Component teleportRequest(UUID requester) {
-//        if (teleportRequests.stream().noneMatch(request -> request.getRequester().equals(requester))) {
-//            return ChatUtils.error("You have already requested a teleport to this player");
-//        } else {
-//            TeleportRequest request = new TeleportRequest(this, requester);
-//            teleportRequests.add(request);
-//            return ChatUtils.success("Teleport request sent to %s", displayName);
-//        }
-//    }
-//
-//    public Component denyTeleportRequest(UUID requester) {
-//        TeleportRequest request = teleportRequests.stream().filter(teleportRequest -> teleportRequest.getRequester().equals(requester)).findFirst().orElse(null);
-//        if (request == null) {
-//            return ChatUtils.error("You have not requested a teleport to %s", displayName);
-//        }
-//        return ChatUtils.success("Teleport request denied to %s", displayName);
-//    }
-//
-//    public void removeTeleportRequest(UUID id) {
-//        teleportRequests.removeIf(request -> request.getId().equals(id));
-//    }
 
     private String getChatChannel() {
         return globalSQL.getString("SELECT chat_channel FROM player_data WHERE uuid='" + uuid + "';");
