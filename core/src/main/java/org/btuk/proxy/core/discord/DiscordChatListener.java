@@ -22,7 +22,6 @@ public class DiscordChatListener extends ListenerAdapter {
     private final Discord discord;
     private final ChatManager chatManager;
     private final String chatChannel;
-    private final String reviewerChannel;
     private final String staffChannel;
 
     private static final Component DISCORD_PREFIX = Component.text("[Discord] ", NamedTextColor.DARK_GRAY);
@@ -31,11 +30,10 @@ public class DiscordChatListener extends ListenerAdapter {
 
     private static final Component STAFF_PREFIX = Component.text("[Staff]", NamedTextColor.RED);
 
-    public DiscordChatListener(Discord discord, ChatManager chatManager, String chatChannel, String reviewerChannel, String staffChannel) {
+    public DiscordChatListener(Discord discord, ChatManager chatManager, String chatChannel, String staffChannel) {
         this.discord = discord;
         this.chatManager = chatManager;
         this.chatChannel = chatChannel;
-        this.reviewerChannel = reviewerChannel;
         this.staffChannel = staffChannel;
         log.info("Enabling Discord Chat Listener");
     }

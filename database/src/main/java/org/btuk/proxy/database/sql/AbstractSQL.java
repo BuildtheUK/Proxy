@@ -1,12 +1,16 @@
 package org.btuk.proxy.database.sql;
 
+import lombok.extern.java.Log;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
 
+@Log
 public abstract class AbstractSQL {
 
     private final DataSource dataSource;
@@ -44,6 +48,22 @@ public abstract class AbstractSQL {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean update(String sql, Object... params) {
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < params.length; i++) {
+                statement.setObject(i + 1, params[i]);
+            }
+
+            statement.executeUpdate();
+            return true;
+
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "Error executing SQL update: " + sql, e);
             return false;
         }
     }

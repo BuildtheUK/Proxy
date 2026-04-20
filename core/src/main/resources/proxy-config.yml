@@ -1,5 +1,5 @@
 #Config version (do not update)
-version: "1.10.1"
+version: "1.11.0"
 
 #Bot token
 token: "insert token here"
@@ -14,6 +14,7 @@ chat:
     info: 0
     chat: 0
   staff: 0
+  moderator: 0
 
 #Discord role IDs.
 discord_roles:

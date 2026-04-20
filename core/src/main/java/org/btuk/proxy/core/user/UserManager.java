@@ -2,21 +2,10 @@ package org.btuk.proxy.core.user;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.FocusEvent;
-import net.bteuk.network.lib.dto.MuteEvent;
-import net.bteuk.network.lib.dto.OnlineUser;
-import net.bteuk.network.lib.dto.OnlineUserAdd;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-import net.bteuk.network.lib.dto.PlotMessage;
-import net.bteuk.network.lib.dto.SwitchServerEvent;
-import net.bteuk.network.lib.dto.UserConnectReply;
-import net.bteuk.network.lib.dto.UserConnectRequest;
-import net.bteuk.network.lib.dto.UserDisconnect;
-import net.bteuk.network.lib.dto.UserRemove;
-import net.bteuk.network.lib.dto.UserUpdate;
+import net.bteuk.network.lib.dto.*;
 import net.bteuk.network.lib.enums.ChatChannels;
+import net.bteuk.network.lib.enums.ModerationAction;
+import net.bteuk.network.lib.enums.TeleportRequestType;
 import net.bteuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
@@ -28,6 +17,7 @@ import java.awt.Color;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.chat.ChatHandler;
@@ -75,7 +65,9 @@ public class UserManager {
 
     private final Discord discord;
 
-    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord) {
+    private final AutoMod autoMod;
+
+    public UserManager(CoreUserManager coreUserManager, ChatHandler chatHandler, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, RegionSQL regionSQL, CoreServerManager coreServerManager, Scheduler scheduler, ChatManager chatManager, PlayerManager playerManager, Analytics analytics, Discord discord, AutoMod autoMod) {
         this.coreUserManager = coreUserManager;
         this.chatHandler = chatHandler;
         this.tabManager = tabManager;
@@ -88,6 +80,7 @@ public class UserManager {
         this.playerManager = playerManager;
         this.analytics = analytics;
         this.discord = discord;
+        this.autoMod = autoMod;
         initOnlineTracker();
     }
 
@@ -193,7 +186,7 @@ public class UserManager {
                 log.info(String.format("Connecting player to %s.", switchServerEvent.getTo_server()));
             }, () -> {
                 // Send message that the server is not online.
-                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), user.getUuid(), "server",
+                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), user.getUuid(), SERVER_SENDER,
                     ChatUtils.error("The server %s is not available, please contact an admin!", switchServerEvent.getTo_server()),
                     false);
 
@@ -293,7 +286,7 @@ public class UserManager {
         } else {
 
             // Add user.
-            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler);
+            user = new User(request, globalSQL, chatHandler, tabManager, analytics, scheduler, autoMod);
             coreUserManager.addUser(user);
 
             if (!globalSQL.hasRow("SELECT uuid FROM player_data WHERE uuid='" + request.getUuid() + "';")) {
@@ -421,6 +414,47 @@ public class UserManager {
         );
     }
 
+    public void handleModerationEvent(ModerationEvent moderationEvent) {
+        tabManager.updatePlayerByUuid(moderationEvent.getUuid());
+
+        // For an unmute-event remove their flagged words, else they'll just get auto-muted next time they speak.
+        if (moderationEvent.getModerationAction() == ModerationAction.UNMUTE) {
+            User user = coreUserManager.getUserByUuid(moderationEvent.getUuid());
+            if (user == null) {
+                // Clear directly from the database.
+                globalSQL.update("DELETE FROM automod_flags WHERE uuid='" + moderationEvent.getUuid() + "';");
+            } else {
+                user.getAutoModFlags().clear();
+            }
+        }
+    }
+
+    public void handleTeleportEvent(TeleportEvent teleportEvent) {
+        User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
+        User target = coreUserManager.getUserByUuid(teleportEvent.getTarget());
+        if (requester == null || !requester.isOnline()) {
+            if (teleportEvent.getType() == TeleportRequestType.ACCEPT || teleportEvent.getType() == TeleportRequestType.DENY) {
+                chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player is not online."), false));
+            } else {
+                log.severe("No user found for teleport requester " + teleportEvent.getRequester() + "!");
+            }
+            return;
+        } else if (target == null || !target.isOnline()) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player you are trying to teleport to is not online."), false));
+            return;
+        }
+
+        Component response = switch (teleportEvent.getType()) {
+            case REQUEST -> requester.teleportRequest(target);
+            case ACCEPT -> requester.acceptTeleportRequest(target);
+            case DENY -> requester.denyTeleportRequest(target);
+        };
+        String responseRecipient = teleportEvent.getType() == TeleportRequestType.REQUEST ? requester.getUuid() : target.getUuid();
+        DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), responseRecipient, SERVER_SENDER, response, false);
+
+        chatHandler.handle(directMessage);
+    }
+
     private void initOnlineTracker() {
         scheduler.createRepeatingTask(() -> {
             playerManager.getPlayers().forEach(player -> {
@@ -461,12 +495,18 @@ public class UserManager {
         // Remove all plot, zone and region invites sent and received.
         removeInvites(user.getUuid());
 
+        // Remove all teleport requests sent to and from this user.
+        removeTeleportRequests(user);
+
         // Remove the user from the list.
         coreUserManager.removeUser(user);
         user.delete();
-        // Remove the user from the list of muted users for all players, if they had this player muted.
+        // Remove the user from the list of muted users for all players if they had this player muted.
         coreUserManager.unmuteUser(user);
         UserRemove userRemoveEvent = new UserRemove(user.getUuid());
+
+        // Store the auto mod status for this player.
+        user.saveAutoModFlags();
 
         chatHandler.handle(userRemoveEvent);
         if (!shutdown) {
@@ -495,7 +535,7 @@ public class UserManager {
             int regions = regionSQL.getInt("SELECT COUNT(region) FROM region_requests WHERE staff_accept=0;");
             if (regions != 0) {
                 Component regionMessage = ChatUtils.success("There " + (regions == 1 ? "is" : "are") + " %s region " + (regions == 1 ? "request" : "requests") + " to review.", String.valueOf(regions));
-                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, "server", regionMessage, false);
+                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER, regionMessage, false);
                 chatHandler.handle(directMessage);
             }
 
@@ -503,7 +543,7 @@ public class UserManager {
             int navigation = globalSQL.getInt("SELECT COUNT(location) FROM location_requests;");
             if (navigation != 0) {
                 Component navigationMessage = ChatUtils.success("There " + (navigation == 1 ? "is" : "are") + " %s navigation " + (navigation == 1 ? "request" : "requests") + " to review.", String.valueOf(navigation));
-                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, "server", navigationMessage, false);
+                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER, navigationMessage, false);
                 chatHandler.handle(directMessage);
             }
         }
@@ -516,7 +556,7 @@ public class UserManager {
             if (user.getPreviousPlotSubmissionCount() != plots && (plots != 0 || includeZero)) {
                 user.setPreviousPlotSubmissionCount(plots);
                 Component plotMessage = ChatUtils.success(messageTemplate, ChatUtils.success(plots == 1 ? "is" : "are"), Component.text(String.valueOf(plots), NamedTextColor.DARK_AQUA), ChatUtils.success(plots == 1 ? "plot" : "plots"));
-                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, "server", plotMessage, false);
+                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER, plotMessage, false);
                 chatHandler.handle(directMessage);
             }
         }
@@ -528,7 +568,7 @@ public class UserManager {
             if (user.getPreviousPlotVerificationCount() != plots && (plots != 0 || includeZero)) {
                 user.setPreviousPlotVerificationCount(plots);
                 Component plotMessage = ChatUtils.success(messageTemplate, ChatUtils.success(plots == 1 ? "is" : "are"), Component.text(String.valueOf(plots), NamedTextColor.DARK_AQUA), ChatUtils.success(plots == 1 ? "plot" : "plots"));
-                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, "server", plotMessage, false);
+                DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER, plotMessage, false);
                 chatHandler.handle(directMessage);
             }
         }
@@ -563,5 +603,10 @@ public class UserManager {
         user.setTipsEnabled(disconnect.getTipsEnabled());
         user.setChatChannel(disconnect.getChatChannel());
         user.setTeleportEnabled(disconnect.getTeleportEnabled());
+    }
+
+    private void removeTeleportRequests(User user) {
+        coreUserManager.runForEach(otherUser -> otherUser.cancelTeleportRequestTo(user));
+        user.cancelTeleportRequests();
     }
 }

@@ -9,10 +9,11 @@ import org.btuk.proxy.core.server.CoreServerManager;
 import org.btuk.proxy.core.server.Server;
 
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -26,12 +27,12 @@ public class ProxyCoreServerManager implements CoreServerManager {
     private final Proxy proxy;
 
     @Getter
-    private final List<Server> servers;
+    private final Set<Server> servers;
 
     public ProxyCoreServerManager(GlobalSQL globalSQL, Proxy proxy) {
         this.globalSQL = globalSQL;
         this.proxy = proxy;
-        servers = Collections.synchronizedList(new ArrayList<>());
+        servers = Collections.synchronizedSet(new HashSet<>());
     }
 
     /**
@@ -54,8 +55,8 @@ public class ProxyCoreServerManager implements CoreServerManager {
     }
 
     @Override
-    public List<Server> getOnlineServers() {
-        return proxy.getServer().getAllServers().stream().map(ProxyServer::new).collect(Collectors.toList());
+    public Set<Server> getOnlineServers() {
+        return proxy.getServer().getAllServers().stream().map(ProxyServer::new).collect(Collectors.toSet());
     }
 
     @Override
