@@ -131,7 +131,10 @@ public class Discord {
     public void addJDAEventListeners(ChatManager chatManager, CoreUserManager coreUserManager, TabManager tabManager, PlotSQL plotSQL) {
         jda.addEventListener(new DiscordChatListener(this, chatManager, chatChannelId, staffChannelId));
         jda.addEventListener(new BotChatListener(chatHandler, linking));
-        jda.addEventListener(new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL));
+
+        CommandManager commandManager = new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL);
+        jda.addEventListener(commandManager);
+        jda.getGuilds().forEach(commandManager::registerCommands);
     }
 
     /**

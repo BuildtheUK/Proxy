@@ -2,6 +2,8 @@ package org.btuk.proxy.core.discord.command;
 
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
+
+import lombok.extern.java.Log;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
@@ -24,6 +26,7 @@ import org.btuk.proxy.core.user.CoreUserManager;
  * Manages all Discord commands.
  * Each command is stored in a map so when a command interaction is run it can be routed accordingly.
  */
+@Log
 public class CommandManager extends ListenerAdapter {
 
     private final CoreUserManager userManager;
@@ -85,7 +88,9 @@ public class CommandManager extends ListenerAdapter {
     /**
      * Registers all the Discord commands. Is called when either the guild is ready, or the bot has joined the guild.
      */
-    private void registerCommands(Guild guild) {
+    public void registerCommands(Guild guild) {
+        log.info("Registering commands for guild: " + guild.getName());
+        commands.clear();
 
         //Create an option for player selection.
         OptionData playerOption = new OptionData(OptionType.STRING, "player", "The player to fetch the plots for", false);
