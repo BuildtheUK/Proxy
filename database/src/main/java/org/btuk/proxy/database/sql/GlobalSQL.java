@@ -2,15 +2,18 @@ package org.btuk.proxy.database.sql;
 
 import lombok.extern.java.Log;
 
+import org.btuk.proxy.database.dto.AutoModFlagDTO;
+import org.btuk.proxy.database.dto.BuildingDTO;
+import org.btuk.proxy.database.dto.PlayerDTO;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.btuk.proxy.database.dto.AutoModFlagDTO;
 
 @Log
 public class GlobalSQL extends AbstractSQL {
@@ -200,5 +203,85 @@ public class GlobalSQL extends AbstractSQL {
         } catch (SQLException e) {
             log.severe("Failed to insert moderation record for " + uuid + ": " + e.getMessage());
         }
+    }
+
+    public String getPlayerUuidByName(String name) {
+        if (name == null) {
+            return null;
+        }
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT uuid FROM player_data WHERE name=?;")) {
+            statement.setString(1, name);
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return results.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get player uuid for " + name + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    public List<PlayerDTO> getOnlinePlayers() {
+        List<PlayerDTO> players = new ArrayList<>();
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT uuid, name FROM player_data WHERE uuid IN (SELECT uuid FROM online_users);");
+             ResultSet results = statement.executeQuery()) {
+            while (results.next()) {
+                players.add(new PlayerDTO(results.getString(1), results.getString(2)));
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get online players: " + e.getMessage());
+        }
+        return players;
+    }
+
+    public List<BuildingDTO> getBuildingsByPlayer(String uuid) {
+        List<BuildingDTO> buildings = new ArrayList<>();
+        if (uuid == null) return buildings;
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon FROM buildings WHERE player_id=?;")) {
+            statement.setString(1, uuid);
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    buildings.add(mapBuilding(results));
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get buildings for " + uuid + ": " + e.getMessage());
+        }
+        return buildings;
+    }
+
+    public List<BuildingDTO> getBuildingsByArea(double minLat, double maxLat, double minLon, double maxLon) {
+        List<BuildingDTO> buildings = new ArrayList<>();
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon FROM buildings WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?;")) {
+            statement.setDouble(1, minLat);
+            statement.setDouble(2, maxLat);
+            statement.setDouble(3, minLon);
+            statement.setDouble(4, maxLon);
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    buildings.add(mapBuilding(results));
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get buildings by area: " + e.getMessage());
+        }
+        return buildings;
+    }
+
+    private BuildingDTO mapBuilding(ResultSet results) throws SQLException {
+        Timestamp timestamp = results.getTimestamp(6);
+        return new BuildingDTO(
+                results.getInt(1),
+                results.getInt(2),
+                results.getString(3),
+                results.getBoolean(4),
+                results.getBoolean(5),
+                timestamp != null ? timestamp.toLocalDateTime() : null,
+                results.getDouble(7),
+                results.getDouble(8)
+        );
     }
 }

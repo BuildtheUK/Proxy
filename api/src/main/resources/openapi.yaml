@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: Proxy API
+  description: Lightweight API for Proxy internal communication.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/v1
+paths:
+  /status:
+    get:
+      tags:
+        - Status
+      summary: Get API status
+      operationId: getStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /player/{name}:
+    get:
+      tags:
+        - Player
+      summary: Get player uuid by name
+      operationId: getPlayerUuid
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '404':
+          description: Player not found
+  /players/online:
+    get:
+      tags:
+        - Player
+      summary: Get online players
+      operationId: getOnlinePlayers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Player'
+  /buildings/player/{uuid}:
+    get:
+      tags:
+        - Buildings
+      summary: Get buildings by player uuid
+      operationId: getBuildingsByPlayer
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Building'
+  /buildings/area:
+    get:
+      tags:
+        - Buildings
+      summary: Get buildings for a specific area
+      operationId: getBuildingsByArea
+      parameters:
+        - name: minLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: minLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Building'
+components:
+  schemas:
+    Status:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+    Player:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    Building:
+      type: object
+      properties:
+        buildingId:
+          type: integer
+        coordinateId:
+          type: integer
+        playerId:
+          type: string
+          format: uuid
+        isPublic:
+          type: boolean
+        playerBuilt:
+          type: boolean
+        timeAdded:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
