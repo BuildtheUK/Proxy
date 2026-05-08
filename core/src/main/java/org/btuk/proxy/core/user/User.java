@@ -555,6 +555,12 @@ public class User {
         globalSQL.saveAutoModFlags(uuid, flags);
     }
 
+    public void updatePlayerSkin() {
+        if (playerSkin != null) {
+            globalSQL.update("UPDATE player_data SET skin='" + playerSkin + "' WHERE uuid='" + uuid + "';");
+        }
+    }
+
     private static JsonNode getJsonNodeFromUrl(URL url) throws IOException {
         StringBuilder inline = new StringBuilder();
         Scanner scanner = new Scanner(url.openStream());
