@@ -19,9 +19,13 @@ public class GlobalSQL extends AbstractSQL {
     }
 
     public boolean createUser(String uuid, String name, String playerSkin) {
-        if (uuid == null || name == null || playerSkin == null) {
-            log.warning("createUser called with null argument(s)");
+        if (uuid == null || name == null) {
+            log.severe("createUser called with null argument(s)");
             return false;
+        }
+
+        if (playerSkin == null) {
+            log.warning("createUser called without a player skin.");
         }
 
         final String sql = """

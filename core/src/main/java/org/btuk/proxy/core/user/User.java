@@ -295,7 +295,12 @@ public class User {
     public UserConnectReply createUserConnectReply() {
 
         // Create database object if not exists.
-        if (newUser && globalSQL.createUser(uuid, name, playerSkin)) {
+        if (newUser) {
+            if (!globalSQL.createUser(uuid, name, playerSkin)) {
+                // We don't want to send a reply to the server since this could cause issues.
+                // The user won't be able to do anything, so this is not a perfect solution.
+                throw new RuntimeException("Failed to create user " + uuid + " in database.");
+            }
             newUser = false;
         }
 
