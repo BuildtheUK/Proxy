@@ -23,7 +23,10 @@ import org.btuk.proxy.core.chat.automod.AutoModMatch;
 import org.btuk.proxy.core.chat.automod.AutoModRule;
 import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.sql.GlobalSQL;
+
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -395,7 +398,18 @@ public class User {
             return ChatUtils.error("You are currently muted, unable to send request.");
         }
         teleportRequests.add(new TeleportRequest(scheduler, this, target));
-        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), SERVER_SENDER, ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
+        String teleportAcceptCommand = "/tpaccept " + name;
+        String teleportDenyCommand = "/tpdeny " + name;
+        Component teleportAccept = Component.text(teleportAcceptCommand, NamedTextColor.DARK_AQUA)
+            .clickEvent(ClickEvent.runCommand(teleportAcceptCommand))
+            .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to accept the teleport request")));
+        Component teleportDeny = Component.text(teleportDenyCommand, NamedTextColor.DARK_AQUA)
+            .clickEvent(ClickEvent.runCommand(teleportDenyCommand))
+            .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to deny the teleport request")));
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), SERVER_SENDER,
+            ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.",
+                Component.text(name, NamedTextColor.DARK_AQUA), teleportAccept, teleportDeny), false)
+        );
         return ChatUtils.success("Requested to teleport to %s.", target.getDisplayName());
     }
 
@@ -447,6 +461,7 @@ public class User {
         teleportRequests.forEach(TeleportRequest::cancel);
         teleportRequests.clear();
     }
+
     public void addAutoModFlag(AutoModFlag flag) {
         autoModFlags.add(flag);
     }
@@ -540,11 +555,11 @@ public class User {
         List<AutoModFlagDTO> flags = new ArrayList<>();
         for (AutoModFlag flag : autoModFlags) {
             flags.add(new AutoModFlagDTO(
-                    flag.getRule().getId(),
-                    flag.getTimestamp(),
-                    flag.getMessage(),
-                    flag.getMatch().messageWord(),
-                    flag.getMatch().flaggedWord()
+                flag.getRule().getId(),
+                flag.getTimestamp(),
+                flag.getMessage(),
+                flag.getMatch().messageWord(),
+                flag.getMatch().flaggedWord()
             ));
         }
         globalSQL.saveAutoModFlags(uuid, flags);
