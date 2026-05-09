@@ -430,29 +430,22 @@ public class UserManager {
     }
 
     public void handleTeleportEvent(TeleportEvent teleportEvent) {
-        User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
         User target = coreUserManager.getUserByUuid(teleportEvent.getTarget());
-        if (requester == null || !requester.isOnline()) {
-            if (teleportEvent.getType() == TeleportRequestType.ACCEPT || teleportEvent.getType() == TeleportRequestType.DENY) {
-                chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player is not online."), false));
+        if (target == null || !target.isOnline()) {
+            if (teleportEvent.getType() == TeleportRequestType.REQUEST) {
+                chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player you are trying to teleport to is not online."), false));
             } else {
-                log.severe("No user found for teleport requester " + teleportEvent.getRequester() + "!");
+                log.severe("No user found for teleport target " + teleportEvent.getTarget() + "!");
             }
-            return;
-        } else if (target == null || !target.isOnline()) {
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player you are trying to teleport to is not online."), false));
             return;
         }
 
-        Component response = switch (teleportEvent.getType()) {
-            case REQUEST -> requester.teleportRequest(target);
-            case ACCEPT -> requester.acceptTeleportRequest(target);
-            case DENY -> requester.denyTeleportRequest(target);
-        };
-        String responseRecipient = teleportEvent.getType() == TeleportRequestType.REQUEST ? requester.getUuid() : target.getUuid();
-        DirectMessage directMessage = new DirectMessage(ChatChannels.GLOBAL.getChannelName(), responseRecipient, SERVER_SENDER, response, false);
-
-        chatHandler.handle(directMessage);
+        User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
+        switch (teleportEvent.getType()) {
+            case REQUEST -> target.teleportRequest(requester);
+            case ACCEPT -> target.acceptTeleportRequest(requester, teleportEvent.getRequester() == null);
+            case DENY -> target.denyTeleportRequest(requester, teleportEvent.getRequester() == null);
+        }
     }
 
     private void initOnlineTracker() {
@@ -606,7 +599,7 @@ public class UserManager {
     }
 
     private void removeTeleportRequests(User user) {
-        coreUserManager.runForEach(otherUser -> otherUser.cancelTeleportRequestTo(user));
+        coreUserManager.runForEach(otherUser -> otherUser.cancelTeleportRequestFrom(user));
         user.cancelTeleportRequests();
     }
 }
