@@ -557,7 +557,7 @@ public class User {
 
     public void updatePlayerSkin() {
         if (playerSkin != null) {
-            globalSQL.update("UPDATE player_data SET skin='" + playerSkin + "' WHERE uuid='" + uuid + "';");
+            globalSQL.update("UPDATE player_data SET player_skin='" + playerSkin + "' WHERE uuid='" + uuid + "';");
         }
     }
 
