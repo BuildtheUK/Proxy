@@ -298,6 +298,9 @@ public class UserManager {
             } else {
                 // Send the connect message.
                 joinMessage = JOIN_MESSAGE;
+
+                // Update the player skin in the database.
+                user.updatePlayerSkin();
             }
         }
 
