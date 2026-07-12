@@ -4,6 +4,7 @@ import lombok.extern.java.Log;
 import org.btuk.proxy.api.impl.BuildingsApiImpl;
 import org.btuk.proxy.api.impl.PlayerApiImpl;
 import org.btuk.proxy.api.impl.StatusApiImpl;
+import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.database.sql.GlobalSQL;
 
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -19,11 +20,14 @@ public class ProxyApi {
     private final boolean enabled;
     private final int port;
     private final GlobalSQL globalSQL;
+    private final ChatManager chatManager;
 
-    public ProxyApi(boolean enabled, int port, GlobalSQL globalSQL) {
+
+    public ProxyApi(boolean enabled, int port, GlobalSQL globalSQL, ChatManager chatManager) {
         this.enabled = enabled;
         this.port = port;
         this.globalSQL = globalSQL;
+        this.chatManager = chatManager;
     }
 
     public void start() {
@@ -37,11 +41,11 @@ public class ProxyApi {
             apiPort = 8080;
         }
 
-        String baseUri = "http://0.0.0.0:" + apiPort + "/v1/";
+        String baseUri = "http://0.0.0.0:" + apiPort + "/api/";
 
         ResourceConfig rc = new ResourceConfig()
             .register(new StatusApiImpl())
-            .register(new PlayerApiImpl(globalSQL))
+            .register(new PlayerApiImpl(globalSQL,chatManager))
             .register(new BuildingsApiImpl(globalSQL));
 
         try {

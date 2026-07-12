@@ -109,6 +109,14 @@
             <groupId>org.btuk.proxy</groupId>
             <artifactId>core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.btuk.proxy</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.btuk.proxy</groupId>
+            <artifactId>database</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.velocitypowered</groupId>

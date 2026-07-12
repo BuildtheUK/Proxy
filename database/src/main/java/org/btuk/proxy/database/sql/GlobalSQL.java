@@ -223,6 +223,24 @@ public class GlobalSQL extends AbstractSQL {
         return null;
     }
 
+    public String getPlayerUsernameByUuid(String uuid) {
+        if (uuid == null) {
+            return null;
+        }
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT name FROM player_data WHERE uuid=?;")) {
+            statement.setString(1, uuid);
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return results.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get player uuid for " + uuid + ": " + e.getMessage());
+        }
+        return null;
+    }
+
     public List<PlayerDTO> getOnlinePlayers() {
         List<PlayerDTO> players = new ArrayList<>();
         try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT uuid, name FROM player_data WHERE uuid IN (SELECT uuid FROM online_users);");

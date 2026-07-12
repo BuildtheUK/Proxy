@@ -66,7 +66,7 @@ role_syncing:
 #API Configuration
 api:
   enabled: true
-  port: 8080
+  port: 61101
 
 #Database login
 host: localhost

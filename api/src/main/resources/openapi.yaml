@@ -4,7 +4,7 @@ info:
   description: Lightweight API for Proxy internal communication.
   version: 1.0.0
 servers:
-  - url: http://localhost:8080/v1
+  - url: http://51.195.190.215:61101/api
 paths:
   /status:
     get:
@@ -19,7 +19,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /player/{name}:
+  /player/uuid/{name}:
     get:
       tags:
         - Player
@@ -41,6 +41,49 @@ paths:
                 format: uuid
         '404':
           description: Player not found
+  /player/username/{uuid}:
+    get:
+      tags:
+        - Player
+      summary: Get player username by uuid
+      operationId: getPlayerUsername
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: Player not found
+  /player/message/{uuid}:
+    post:
+      tags:
+        - Player
+      summary: Send a message to the player on the server
+      operationId: sendPlayerMessage
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The message to send and the player to send to
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        "201":
+          description: Message Added
   /players/online:
     get:
       tags:
@@ -133,6 +176,11 @@ components:
           type: string
           format: uuid
         name:
+          type: string
+    Message:
+      type: object
+      properties:
+        message:
           type: string
     Building:
       type: object

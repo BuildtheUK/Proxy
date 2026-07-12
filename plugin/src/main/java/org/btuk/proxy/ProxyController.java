@@ -1,4 +1,4 @@
-package org.btuk.proxy.core;
+package org.btuk.proxy;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
@@ -75,7 +75,7 @@ public class ProxyController {
 
     private UserManager userManager;
 
-    private final ProxyApi proxyApi;
+    private ProxyApi proxyApi;
 
     private static final String PROXY_CONFIG_NAME = "proxy-config.yml";
 
@@ -99,7 +99,6 @@ public class ProxyController {
 
         setupDatabase();
         this.coreUserManager = new CoreUserManager();
-        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL);
         this.enabled = true;
     }
 
@@ -130,7 +129,7 @@ public class ProxyController {
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL,chatManager);
         serverManager.initOnlineServers();
 
         socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, tabManager));
