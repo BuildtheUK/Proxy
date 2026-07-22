@@ -4,6 +4,7 @@ import lombok.extern.java.Log;
 
 import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.dto.BuildingDTO;
+import org.btuk.proxy.database.dto.GridCellDTO;
 import org.btuk.proxy.database.dto.PlayerDTO;
 
 import javax.sql.DataSource;
@@ -271,24 +272,6 @@ public class GlobalSQL extends AbstractSQL {
         return buildings;
     }
 
-    public List<BuildingDTO> getBuildingsByArea(double minLat, double maxLat, double minLon, double maxLon) {
-        List<BuildingDTO> buildings = new ArrayList<>();
-        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon FROM buildings WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?;")) {
-            statement.setDouble(1, minLat);
-            statement.setDouble(2, maxLat);
-            statement.setDouble(3, minLon);
-            statement.setDouble(4, maxLon);
-            try (ResultSet results = statement.executeQuery()) {
-                while (results.next()) {
-                    buildings.add(mapBuilding(results));
-                }
-            }
-        } catch (SQLException e) {
-            log.severe("Failed to get buildings by area: " + e.getMessage());
-        }
-        return buildings;
-    }
-
     private BuildingDTO mapBuilding(ResultSet results) throws SQLException {
         Timestamp timestamp = results.getTimestamp(6);
         return new BuildingDTO(
@@ -301,5 +284,139 @@ public class GlobalSQL extends AbstractSQL {
                 results.getDouble(7),
                 results.getDouble(8)
         );
+    }
+
+    // Dynamic flexible building count with optional spatial, player, and status filters
+    public int getBuildingCount(List<String> playerUuids, Double minLat, Double maxLat, Double minLon, Double maxLon, Boolean isPublic, Boolean playerBuilt) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM buildings WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (minLat != null && maxLat != null) {
+            sql.append(" AND lat BETWEEN ? AND ?");
+            params.add(minLat);
+            params.add(maxLat);
+        }
+        if (minLon != null && maxLon != null) {
+            sql.append(" AND lon BETWEEN ? AND ?");
+            params.add(minLon);
+            params.add(maxLon);
+        }
+        if (isPublic != null) {
+            sql.append(" AND is_public = ?");
+            params.add(isPublic);
+        }
+        if (playerBuilt != null) {
+            sql.append(" AND player_built = ?");
+            params.add(playerBuilt);
+        }
+        if (playerUuids != null && !playerUuids.isEmpty()) {
+            sql.append(" AND player_id IN (");
+            for (int i = 0; i < playerUuids.size(); i++) {
+                sql.append(i == 0 ? "?" : ", ?");
+                params.add(playerUuids.get(i));
+            }
+            sql.append(")");
+        }
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof Double d) {
+                    statement.setDouble(i + 1, d);
+                } else if (param instanceof Boolean b) {
+                    statement.setBoolean(i + 1, b);
+                } else if (param instanceof String s) {
+                    statement.setString(i + 1, s);
+                }
+            }
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return results.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get building count: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // Area fetch with privacy filtering (excludes private buildings unless owned by playerUuid)
+    public List<BuildingDTO> getBuildingsByArea(double minLat, double maxLat, double minLon, double maxLon, String playerUuid) {
+        List<BuildingDTO> buildings = new ArrayList<>();
+
+        boolean hasPlayer = (playerUuid != null && !playerUuid.isEmpty());
+        String sql = "SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon " +
+                "FROM buildings WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ? " +
+                (hasPlayer ? "AND (is_public = TRUE OR player_id = ?);" : "AND is_public = TRUE;");
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setDouble(1, minLat);
+            statement.setDouble(2, maxLat);
+            statement.setDouble(3, minLon);
+            statement.setDouble(4, maxLon);
+            if (hasPlayer) {
+                statement.setString(5, playerUuid);
+            }
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    buildings.add(mapBuilding(results));
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to get buildings by area: " + e.getMessage());
+        }
+        return buildings;
+    }
+
+    //this works could be updated in the future to group buildings in a more organic way (not just a grid)
+    public List<GridCellDTO> getBuildingGridCounts(double minLat, double maxLat, double minLon, double maxLon, double stepLat, double stepLon, String playerUuid) {
+        List<GridCellDTO> cells = new ArrayList<>();
+        boolean hasPlayer = (playerUuid != null && !playerUuid.isEmpty());
+
+        // Anchor cells globally to (0,0) using FLOOR(coord / step)
+        String sql = """
+        SELECT 
+            CAST(FLOOR(lat / ?) AS SIGNED) AS cell_y,
+            CAST(FLOOR(lon / ?) AS SIGNED) AS cell_x,
+            COUNT(*) AS cell_count
+        FROM buildings
+        WHERE lat BETWEEN ? AND ? 
+          AND lon BETWEEN ? AND ?
+          """ + (hasPlayer ? "AND (is_public = TRUE OR player_id = ?) " : "AND is_public = TRUE ") + """
+        GROUP BY cell_y, cell_x;
+        """;
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            int idx = 1;
+            statement.setDouble(idx++, stepLat);
+            statement.setDouble(idx++, stepLon);
+
+            statement.setDouble(idx++, minLat);
+            statement.setDouble(idx++, maxLat);
+            statement.setDouble(idx++, minLon);
+            statement.setDouble(idx++, maxLon);
+
+            if (hasPlayer) {
+                statement.setString(idx++, playerUuid);
+            }
+
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    int cellY = results.getInt("cell_y");
+                    int cellX = results.getInt("cell_x");
+                    int count = results.getInt("cell_count");
+
+                    // Calculate the exact center coordinate of this fixed world cell
+                    double centerLat = (cellY + 0.5) * stepLat;
+                    double centerLon = (cellX + 0.5) * stepLon;
+
+                    cells.add(new GridCellDTO(centerLat, centerLon, count));
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to calculate building grid count in SQL: " + e.getMessage());
+        }
+        return cells;
     }
 }
