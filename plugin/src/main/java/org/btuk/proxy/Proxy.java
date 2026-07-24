@@ -38,6 +38,8 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import org.btuk.proxy.core.ProxyController;
+
 @Plugin(id = "proxy", name = "Proxy", version = "1.12.0-SNAPSHOT",
         url = "https://github.com/BTEUK/Proxy", description = "Proxy plugin, managed chat, discord and server related actions.", authors = {"ELgamer"})
 public class Proxy {
