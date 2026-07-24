@@ -298,8 +298,8 @@ components:
       properties:
         buildingId:
           type: integer
-        coordinateId:
-          type: integer
+        playerName:
+          type: string
         playerId:
           type: string
           format: uuid
@@ -332,6 +332,22 @@ components:
         lon:
           type: number
           format: double
+        maxLat:
+          type: number
+          format: double
+        maxLon:
+          type: number
+          format: double
+        minLat:
+          type: number
+          format: double
+        minLon:
+          type: number
+          format: double
+        row:
+          type: integer
+        col:
+          type: integer
         count:
           type: integer
           example: 12

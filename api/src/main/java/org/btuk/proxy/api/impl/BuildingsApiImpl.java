@@ -72,6 +72,12 @@ public class BuildingsApiImpl implements BuildingsApi {
             GridCell cell = new GridCell();
             cell.setLat(dbCell.lat());
             cell.setLon(dbCell.lon());
+            cell.setMinLat(dbCell.minLat());
+            cell.setMaxLat(dbCell.maxLat());
+            cell.setMinLon(dbCell.minLon());
+            cell.setMaxLon(dbCell.maxLon());
+            cell.setRow(dbCell.row());
+            cell.setCol(dbCell.col());
             cell.setCount(dbCell.count());
             cells.add(cell);
         }
@@ -85,7 +91,7 @@ public class BuildingsApiImpl implements BuildingsApi {
     private Building mapBuilding(BuildingDTO dto) {
         Building building = new Building();
         building.setBuildingId(dto.buildingId());
-        building.setCoordinateId(dto.coordinateId());
+        building.setPlayerName(dto.playerName());
         building.setPlayerId(dto.playerId() != null ? UUID.fromString(dto.playerId()) : null);
         building.setIsPublic(dto.isPublic());
         building.setPlayerBuilt(dto.playerBuilt());

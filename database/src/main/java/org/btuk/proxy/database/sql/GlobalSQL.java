@@ -255,34 +255,17 @@ public class GlobalSQL extends AbstractSQL {
         return players;
     }
 
-    public List<BuildingDTO> getBuildingsByPlayer(String uuid) {
-        List<BuildingDTO> buildings = new ArrayList<>();
-        if (uuid == null) return buildings;
-
-        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement("SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon FROM buildings WHERE player_id=?;")) {
-            statement.setString(1, uuid);
-            try (ResultSet results = statement.executeQuery()) {
-                while (results.next()) {
-                    buildings.add(mapBuilding(results));
-                }
-            }
-        } catch (SQLException e) {
-            log.severe("Failed to get buildings for " + uuid + ": " + e.getMessage());
-        }
-        return buildings;
-    }
-
     private BuildingDTO mapBuilding(ResultSet results) throws SQLException {
-        Timestamp timestamp = results.getTimestamp(6);
+        Timestamp timestamp = results.getTimestamp("time_added");
         return new BuildingDTO(
-                results.getInt(1),
-                results.getInt(2),
-                results.getString(3),
-                results.getBoolean(4),
-                results.getBoolean(5),
+                results.getInt("building_id"),
+                results.getString("player_id"),
+                results.getString("player_name"),
+                results.getBoolean("is_public"),
+                results.getBoolean("player_built"),
                 timestamp != null ? timestamp.toLocalDateTime() : null,
-                results.getDouble(7),
-                results.getDouble(8)
+                results.getDouble("lat"),
+                results.getDouble("lon")
         );
     }
 
@@ -341,14 +324,28 @@ public class GlobalSQL extends AbstractSQL {
         return 0;
     }
 
-    // Area fetch with privacy filtering (excludes private buildings unless owned by playerUuid)
+    // Area fetch with JOIN to retrieve builder username
     public List<BuildingDTO> getBuildingsByArea(double minLat, double maxLat, double minLon, double maxLon, String playerUuid) {
         List<BuildingDTO> buildings = new ArrayList<>();
 
         boolean hasPlayer = (playerUuid != null && !playerUuid.isEmpty());
-        String sql = "SELECT building_id, coordinate_id, player_id, is_public, player_built, time_added, lat, lon " +
-                "FROM buildings WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ? " +
-                (hasPlayer ? "AND (is_public = TRUE OR player_id = ?);" : "AND is_public = TRUE;");
+
+        // INNER JOIN on player_data table using building.player_id = player_data.uuid
+        String sql = """
+            SELECT 
+                b.building_id, 
+                b.player_id, 
+                p.name AS player_name, 
+                b.is_public, 
+                b.player_built, 
+                b.time_added, 
+                b.lat, 
+                b.lon
+            FROM buildings b
+            INNER JOIN player_data p ON b.player_id = p.uuid
+            WHERE b.lat BETWEEN ? AND ? 
+              AND b.lon BETWEEN ? AND ?
+            """ + (hasPlayer ? "AND (b.is_public = TRUE OR b.player_id = ?);" : "AND b.is_public = TRUE;");
 
         try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setDouble(1, minLat);
@@ -374,18 +371,20 @@ public class GlobalSQL extends AbstractSQL {
         List<GridCellDTO> cells = new ArrayList<>();
         boolean hasPlayer = (playerUuid != null && !playerUuid.isEmpty());
 
-        // Anchor cells globally to (0,0) using FLOOR(coord / step)
+        // Anchor cells globally to (0,0) using FLOOR(coord / step) and average building positions
         String sql = """
-        SELECT 
-            CAST(FLOOR(lat / ?) AS SIGNED) AS cell_y,
-            CAST(FLOOR(lon / ?) AS SIGNED) AS cell_x,
-            COUNT(*) AS cell_count
-        FROM buildings
-        WHERE lat BETWEEN ? AND ? 
-          AND lon BETWEEN ? AND ?
-          """ + (hasPlayer ? "AND (is_public = TRUE OR player_id = ?) " : "AND is_public = TRUE ") + """
-        GROUP BY cell_y, cell_x;
-        """;
+    SELECT 
+        CAST(FLOOR(lat / ?) AS SIGNED) AS cell_y,
+        CAST(FLOOR(lon / ?) AS SIGNED) AS cell_x,
+        AVG(lat) AS avg_lat,
+        AVG(lon) AS avg_lon,
+        COUNT(*) AS cell_count
+    FROM buildings
+    WHERE lat BETWEEN ? AND ? 
+      AND lon BETWEEN ? AND ?
+      """ + (hasPlayer ? "AND (is_public = TRUE OR player_id = ?) " : "AND is_public = TRUE ") + """
+    GROUP BY cell_y, cell_x;
+    """;
 
         try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
             int idx = 1;
@@ -405,13 +404,27 @@ public class GlobalSQL extends AbstractSQL {
                 while (results.next()) {
                     int cellY = results.getInt("cell_y");
                     int cellX = results.getInt("cell_x");
+                    double avgLat = results.getDouble("avg_lat");
+                    double avgLon = results.getDouble("avg_lon");
                     int count = results.getInt("cell_count");
 
-                    // Calculate the exact center coordinate of this fixed world cell
-                    double centerLat = (cellY + 0.5) * stepLat;
-                    double centerLon = (cellX + 0.5) * stepLon;
+                    // Calculate bounding box bounds for this specific cell grid
+                    double cellMinLat = cellY * stepLat;
+                    double cellMaxLat = (cellY + 1) * stepLat;
+                    double cellMinLon = cellX * stepLon;
+                    double cellMaxLon = (cellX + 1) * stepLon;
 
-                    cells.add(new GridCellDTO(centerLat, centerLon, count));
+                    cells.add(new GridCellDTO(
+                            avgLat,
+                            avgLon,
+                            cellMinLat,
+                            cellMaxLat,
+                            cellMinLon,
+                            cellMaxLon,
+                            cellY,
+                            cellX,
+                            count
+                    ));
                 }
             }
         } catch (SQLException e) {
