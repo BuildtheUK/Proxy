@@ -30,7 +30,11 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <finalName>Proxy-${project.version}</finalName>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
-
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>io.netty:*</exclude>
+                                </excludes>
+                            </artifactSet>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -64,7 +68,10 @@
                                         <exclude>net/kyori/**</exclude>
                                         <exclude>org/jetbrains/**</exclude>
                                         <exclude>org/intellij/**</exclude>
-                                        <exclude>META-INF/**</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
