@@ -18,7 +18,7 @@ import java.util.List;
 public class DatabaseUpdates {
 
     // Version of the database that this build expects.
-    private static final Version EXPECTED_VERSION = Version.of(1, 10, 0);
+    private static final Version EXPECTED_VERSION = Version.of(1, 12, 0);
 
     private final GlobalSQL globalSQL;
 
@@ -78,8 +78,17 @@ public class DatabaseUpdates {
             new MigrationStep(Version.of(1, 7, 3), this::update1_7_3),
             new MigrationStep(Version.of(1, 9, 4), this::update1_9_4),
             new MigrationStep(Version.of(1, 9, 5), this::update1_9_5),
-            new MigrationStep(Version.of(1, 11, 0), () -> {})
+            new MigrationStep(Version.of(1, 12, 0), this::update1_12_0)
         );
+    }
+
+    private void update1_12_0() {
+        // Add indexes for performance optimization.
+        globalSQL.update("CREATE INDEX idx_player_data_1 ON player_data(name);");
+        globalSQL.update("CREATE INDEX idx_buildings_1 ON buildings(player_id);");
+        globalSQL.update("CREATE INDEX idx_buildings_2 ON buildings(lat, lon);");
+        globalSQL.update("CREATE INDEX idx_messages_1 ON messages(recipient);");
+        globalSQL.update("CREATE INDEX idx_moderation_1 ON moderation(uuid, end_time, type);");
     }
 
     private void update1_9_5() {
@@ -292,10 +301,14 @@ public class DatabaseUpdates {
         private Version migrate(Version currentVersion) {
             log.info("Migrating database from version " + currentVersion + " to version " + targetVersion);
 
-            migration.run();
-
-            globalSQL.update("UPDATE unique_data SET data_value='" + targetVersion + "' WHERE data_key='version';");
-            return targetVersion;
+            try {
+                migration.run();
+                globalSQL.update("UPDATE unique_data SET data_value='" + targetVersion + "' WHERE data_key='version';");
+                return targetVersion;
+            } catch (Exception e) {
+                log.severe("Failed to migrate database to version " + targetVersion + ": " + e.getMessage());
+                throw e;
+            }
         }
     }
 

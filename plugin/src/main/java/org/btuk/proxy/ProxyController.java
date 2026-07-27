@@ -1,4 +1,4 @@
-package org.btuk.proxy.core;
+package org.btuk.proxy;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import org.btuk.proxy.api.server.ProxyApi;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.config.Config;
@@ -74,6 +75,8 @@ public class ProxyController {
 
     private UserManager userManager;
 
+    private ProxyApi proxyApi;
+
     private static final String PROXY_CONFIG_NAME = "proxy-config.yml";
 
     private static final String AUTOMOD_CONFIG_NAME = "automod.yml";
@@ -126,15 +129,20 @@ public class ProxyController {
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL,chatManager);
         serverManager.initOnlineServers();
 
         socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, tabManager));
+
+        proxyApi.start();
 
         started = true;
     }
 
     public void stop() {
+        if (proxyApi != null) {
+            proxyApi.stop();
+        }
         if (started) {
             // Show the disconnect message for all players in discord.
             if (discord != null) {

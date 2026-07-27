@@ -2,6 +2,8 @@ package org.btuk.proxy.core.utils;
 
 import org.btuk.proxy.database.sql.GlobalSQL;
 
+import java.util.UUID;
+
 public class Moderation {
 
     private final GlobalSQL globalSQL;

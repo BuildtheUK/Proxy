@@ -6,14 +6,15 @@
 
     <groupId>org.btuk</groupId>
     <artifactId>Proxy</artifactId>
-    <version>1.12.0-SNAPSHOT</version>
+    <version>1.13.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Proxy</name>
     <modules>
         <module>database</module>
-        <module>plugin</module>
+        <module>api</module>
         <module>core</module>
+        <module>plugin</module>
     </modules>
 
     <properties>
@@ -71,6 +72,11 @@
             <dependency>
                 <groupId>org.btuk.proxy</groupId>
                 <artifactId>database</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.btuk.proxy</groupId>
+                <artifactId>api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
