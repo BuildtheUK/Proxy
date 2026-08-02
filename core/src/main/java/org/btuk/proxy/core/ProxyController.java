@@ -1,4 +1,4 @@
-package org.btuk.proxy;
+package org.btuk.proxy.core;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
@@ -99,8 +99,8 @@ public class ProxyController {
         this.enabled = true;
     }
 
-
-    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) throws IOException {
+    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager,
+                      Consumer<ProxySocketHandler> socketInitializer) throws IOException {
 
         if (!enabled) {
             log.severe("Proxy is not enabled, see previous logs for errors.");
@@ -118,7 +118,8 @@ public class ProxyController {
         AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
         ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
 
-        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord, automod);
+        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager,
+                analytics, discord, automod);
 
         ServerManager serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
 
@@ -126,7 +127,7 @@ public class ProxyController {
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL,chatManager);
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager);
         serverManager.initOnlineServers();
 
         socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, tabManager));
@@ -169,7 +170,7 @@ public class ProxyController {
 
                 // Clear JDA listeners
                 if (discord.getJda() != null) {
-                    //Unregister listeners.
+                    // Unregister listeners.
                     discord.getJda().getEventManager().getRegisteredListeners().forEach(listener -> discord.getJda().getEventManager().unregister(listener));
                 }
 

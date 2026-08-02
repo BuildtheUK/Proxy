@@ -51,7 +51,7 @@ public class Proxy {
 
     private HashMap<UUID, String> lastServer;
 
-    private ProxyController proxyController;
+    private org.btuk.proxy.core.ProxyController proxyController;
     
     private String defaultServer;
 
@@ -66,7 +66,7 @@ public class Proxy {
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) throws IOException {
 
-        this.proxyController = new ProxyController(getDataFolder());
+        this.proxyController = new org.btuk.proxy.core.ProxyController(getDataFolder());
 
         this.defaultServer = proxyController.getConfig().getString("default_server");
 

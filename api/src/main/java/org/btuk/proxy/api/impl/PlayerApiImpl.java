@@ -63,7 +63,7 @@ public class PlayerApiImpl implements PlayerApi {
 
         try {
             String messagePlainText = message.getMessage();
-            DirectMessage m = new DirectMessage(GLOBAL.getChannelName(), playerID.toString(), SERVER_SENDER, ChatUtils.success(messagePlainText), true);
+            DirectMessage m = new DirectMessage(GLOBAL.getChannelName(), playerID, SERVER_SENDER, ChatUtils.success(messagePlainText), true);
             chatManager.sendDirectMessage(m);
             return Response.status(Response.Status.CREATED).build();
         }catch (Exception e)

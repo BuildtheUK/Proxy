@@ -25,9 +25,6 @@ public class BuildingsApiImpl implements BuildingsApi {
         this.globalSQL = globalSQL;
     }
 
-
-
-
     @Override
     public Response getBuildingsByArea(Double minLat, Double maxLat, Double minLon, Double maxLon, UUID playerUuid) {
         String playerUuidStr = playerUuid != null ? playerUuid.toString() : null;
