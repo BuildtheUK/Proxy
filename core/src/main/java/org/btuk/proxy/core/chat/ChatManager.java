@@ -1,26 +1,24 @@
 package org.btuk.proxy.core.chat;
 
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.PrivateMessage;
-import net.bteuk.network.lib.dto.ReplyMessage;
-import net.bteuk.network.lib.utils.ChatUtils;
-
-import org.btuk.proxy.core.chat.automod.AutoMod;
-import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-
-import java.util.List;
-
+import org.btuk.network.lib.dto.ChatMessage;
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.dto.PrivateMessage;
+import org.btuk.network.lib.dto.ReplyMessage;
+import org.btuk.network.lib.utils.ChatUtils;
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.user.CoreUserManager;
 import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.core.utils.Analytics;
 import org.btuk.proxy.core.utils.Moderation;
 import org.btuk.proxy.core.utils.Time;
+import org.btuk.proxy.database.sql.GlobalSQL;
 
-import static net.bteuk.network.lib.enums.ChatChannels.GLOBAL;
+import java.util.List;
+
+import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
 import static org.btuk.proxy.core.utils.Constants.DISCORD_SENDER;
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
 

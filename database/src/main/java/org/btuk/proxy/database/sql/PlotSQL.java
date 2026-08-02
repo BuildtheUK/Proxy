@@ -1,8 +1,8 @@
 package org.btuk.proxy.database.sql;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.enums.PlotDifficulties;
-import net.bteuk.network.lib.utils.Reviewing;
+import org.btuk.network.lib.enums.PlotDifficulties;
+import org.btuk.network.lib.utils.Reviewing;
 import org.btuk.proxy.database.sql.migration.AcceptData;
 import org.btuk.proxy.database.sql.migration.DenyData;
 import org.btuk.proxy.database.sql.migration.PlotSubmissions;

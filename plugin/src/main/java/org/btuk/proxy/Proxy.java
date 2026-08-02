@@ -10,20 +10,16 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import lombok.Getter;
-import net.bteuk.network.lib.socket.InputSocket;
-
+import org.btuk.network.lib.socket.InputSocket;
 import org.btuk.proxy.chat.ProxyChatHandler;
-
+import org.btuk.proxy.core.socket.ProxySocketHandler;
 import org.btuk.proxy.listener.CommandListener;
 import org.btuk.proxy.listener.ServerConnectListener;
 import org.btuk.proxy.player.ProxyPlayerManager;
 import org.btuk.proxy.scheduler.ProxyScheduler;
 import org.btuk.proxy.server.ProxyCoreServerManager;
-import org.btuk.proxy.core.socket.ProxySocketHandler;
-
 import org.btuk.proxy.tab.ProxyTabManager;
 import org.slf4j.Logger;
-
 
 import java.io.File;
 import java.io.FileInputStream;

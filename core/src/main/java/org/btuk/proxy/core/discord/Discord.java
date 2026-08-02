@@ -3,20 +3,15 @@ package org.btuk.proxy.core.discord;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.dto.DiscordDirectMessage;
-import net.bteuk.network.lib.dto.DiscordEmbed;
-import net.bteuk.network.lib.dto.DiscordLinking;
-import net.bteuk.network.lib.dto.DiscordRole;
-
-import org.btuk.proxy.core.chat.automod.AutoModMatch;
-import org.btuk.proxy.core.user.User;
-import org.btuk.proxy.database.sql.GlobalSQL;
-import org.btuk.proxy.database.sql.PlotSQL;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
@@ -28,6 +23,22 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.btuk.network.lib.dto.ChatMessage;
+import org.btuk.network.lib.dto.DiscordDirectMessage;
+import org.btuk.network.lib.dto.DiscordEmbed;
+import org.btuk.network.lib.dto.DiscordLinking;
+import org.btuk.network.lib.dto.DiscordRole;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.chat.ChatManager;
+import org.btuk.proxy.core.chat.automod.AutoModMatch;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.discord.command.CommandManager;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.User;
+import org.btuk.proxy.database.sql.GlobalSQL;
+import org.btuk.proxy.database.sql.PlotSQL;
 
 import java.awt.Color;
 import java.nio.charset.StandardCharsets;
@@ -38,14 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.chat.ChatManager;
-import org.btuk.proxy.core.config.Config;
-import org.btuk.proxy.core.discord.command.CommandManager;
-import org.btuk.proxy.core.scheduler.Scheduler;
-import org.btuk.proxy.core.tab.TabManager;
-import org.btuk.proxy.core.user.CoreUserManager;
 
 @Log
 public class Discord {

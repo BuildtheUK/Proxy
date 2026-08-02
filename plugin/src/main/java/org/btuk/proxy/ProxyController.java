@@ -2,28 +2,11 @@ package org.btuk.proxy;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-
-import org.btuk.proxy.core.chat.automod.AutoMod;
-import org.btuk.proxy.database.DatabaseInit;
-import org.btuk.proxy.database.sql.GlobalSQL;
-import org.btuk.proxy.database.sql.PlotSQL;
-import org.btuk.proxy.database.sql.RegionSQL;
-
-import org.slf4j.bridge.SLF4JBridgeHandler;
-
-import javax.sql.DataSource;
-import java.io.File;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
+import org.btuk.network.lib.dto.OnlineUserRemove;
 import org.btuk.proxy.api.server.ProxyApi;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.chat.ChatManager;
+import org.btuk.proxy.core.chat.automod.AutoMod;
 import org.btuk.proxy.core.config.Config;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.discord.ReviewStatus;
@@ -38,6 +21,20 @@ import org.btuk.proxy.core.user.UserManager;
 import org.btuk.proxy.core.utils.Analytics;
 import org.btuk.proxy.core.utils.Constants;
 import org.btuk.proxy.core.utils.Moderation;
+import org.btuk.proxy.database.DatabaseInit;
+import org.btuk.proxy.database.sql.GlobalSQL;
+import org.btuk.proxy.database.sql.PlotSQL;
+import org.btuk.proxy.database.sql.RegionSQL;
+import org.slf4j.bridge.SLF4JBridgeHandler;
+
+import javax.sql.DataSource;
+import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static java.awt.Color.RED;
 import static org.btuk.proxy.core.utils.Constants.LEAVE_MESSAGE;

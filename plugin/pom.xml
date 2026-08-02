@@ -57,7 +57,7 @@
                                 </filter>
 
                                 <filter>
-                                    <artifact>com.github.BTEUK:NetworkLib</artifact>
+                                    <artifact>com.github.BuildtheUK:NetworkLib</artifact>
                                     <excludes>
                                         <exclude>com/fasterxml/**</exclude>
                                         <exclude>com/google/gson/**</exclude>

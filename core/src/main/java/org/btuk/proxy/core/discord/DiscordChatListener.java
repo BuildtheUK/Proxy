@@ -1,9 +1,6 @@
 package org.btuk.proxy.core.discord;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.ChatMessage;
-import net.bteuk.network.lib.enums.ChatChannels;
-import net.bteuk.network.lib.utils.ChatUtils;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.kyori.adventure.text.Component;
@@ -11,7 +8,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.apache.commons.lang3.StringUtils;
-
+import org.btuk.network.lib.dto.ChatMessage;
+import org.btuk.network.lib.enums.ChatChannels;
+import org.btuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.core.chat.ChatManager;
 
 import static org.btuk.proxy.core.utils.Constants.DISCORD_SENDER;

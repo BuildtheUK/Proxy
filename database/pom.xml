@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.BTEUK</groupId>
+            <groupId>com.github.BuildtheUK</groupId>
             <artifactId>NetworkLib</artifactId>
         </dependency>
 

@@ -1,6 +1,6 @@
 package org.btuk.proxy.core.chat;
 
-import net.bteuk.network.lib.dto.AbstractTransferObject;
+import org.btuk.network.lib.dto.AbstractTransferObject;
 
 import org.btuk.proxy.core.exceptions.ServerNotFoundException;
 

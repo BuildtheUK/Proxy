@@ -1,9 +1,27 @@
 package org.btuk.proxy.core.socket;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.*;
-import net.bteuk.network.lib.socket.SocketHandler;
-
+import org.btuk.network.lib.dto.AbstractTransferObject;
+import org.btuk.network.lib.dto.ChatMessage;
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.dto.DiscordDirectMessage;
+import org.btuk.network.lib.dto.DiscordEmbed;
+import org.btuk.network.lib.dto.DiscordLinking;
+import org.btuk.network.lib.dto.DiscordRole;
+import org.btuk.network.lib.dto.FocusEvent;
+import org.btuk.network.lib.dto.ModerationEvent;
+import org.btuk.network.lib.dto.MuteEvent;
+import org.btuk.network.lib.dto.PlotMessage;
+import org.btuk.network.lib.dto.PrivateMessage;
+import org.btuk.network.lib.dto.ReplyMessage;
+import org.btuk.network.lib.dto.ServerShutdown;
+import org.btuk.network.lib.dto.ServerStartup;
+import org.btuk.network.lib.dto.SwitchServerEvent;
+import org.btuk.network.lib.dto.TeleportEvent;
+import org.btuk.network.lib.dto.UserConnectRequest;
+import org.btuk.network.lib.dto.UserDisconnect;
+import org.btuk.network.lib.dto.UserUpdate;
+import org.btuk.network.lib.socket.SocketHandler;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.server.ServerManager;

@@ -1,18 +1,10 @@
 package org.btuk.proxy.core.server;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-import net.bteuk.network.lib.dto.OnlineUsersReply;
-import net.bteuk.network.lib.dto.ServerShutdown;
-import net.bteuk.network.lib.dto.ServerStartup;
-import org.btuk.proxy.database.sql.GlobalSQL;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
+import org.btuk.network.lib.dto.OnlineUserRemove;
+import org.btuk.network.lib.dto.OnlineUsersReply;
+import org.btuk.network.lib.dto.ServerShutdown;
+import org.btuk.network.lib.dto.ServerStartup;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.tab.TabManager;
@@ -20,6 +12,13 @@ import org.btuk.proxy.core.user.CoreUserManager;
 import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.core.user.UserManager;
 import org.btuk.proxy.core.utils.Time;
+import org.btuk.proxy.database.sql.GlobalSQL;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Log
 public class ServerManager {

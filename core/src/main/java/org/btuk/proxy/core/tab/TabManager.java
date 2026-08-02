@@ -1,10 +1,9 @@
 package org.btuk.proxy.core.tab;
 
-import net.bteuk.network.lib.dto.TabPlayer;
+import org.btuk.network.lib.dto.TabPlayer;
+import org.btuk.proxy.core.user.User;
 
 import java.util.Optional;
-
-import org.btuk.proxy.core.user.User;
 
 public interface TabManager {
 

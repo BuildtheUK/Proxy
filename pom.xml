@@ -25,7 +25,7 @@
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
 
-        <networklib.version>955372d721</networklib.version>
+        <networklib.version>48f9c36fa5</networklib.version>
 
         <velocity.version>3.5.0-SNAPSHOT</velocity.version>
 
@@ -86,7 +86,7 @@
             </dependency>
 
             <dependency>
-                <groupId>com.github.BTEUK</groupId>
+                <groupId>com.github.BuildtheUK</groupId>
                 <artifactId>NetworkLib</artifactId>
                 <version>${networklib.version}</version>
             </dependency>
