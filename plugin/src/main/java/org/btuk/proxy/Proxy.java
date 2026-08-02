@@ -11,6 +11,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import lombok.Getter;
 import org.btuk.network.lib.socket.InputSocket;
+import org.btuk.proxy.app.ProxyController;
 import org.btuk.proxy.chat.ProxyChatHandler;
 import org.btuk.proxy.core.socket.ProxySocketHandler;
 import org.btuk.proxy.listener.CommandListener;
@@ -51,7 +52,7 @@ public class Proxy {
 
     private HashMap<UUID, String> lastServer;
 
-    private org.btuk.proxy.core.ProxyController proxyController;
+    private ProxyController proxyController;
     
     private String defaultServer;
 
@@ -66,7 +67,7 @@ public class Proxy {
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) throws IOException {
 
-        this.proxyController = new org.btuk.proxy.core.ProxyController(getDataFolder());
+        this.proxyController = new ProxyController(getDataFolder());
 
         this.defaultServer = proxyController.getConfig().getString("default_server");
 

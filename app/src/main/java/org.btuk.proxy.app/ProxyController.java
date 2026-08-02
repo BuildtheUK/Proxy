@@ -1,4 +1,4 @@
-package org.btuk.proxy.core;
+package org.btuk.proxy.app;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static java.awt.Color.RED;
-import static org.btuk.proxy.core.utils.Constants.LEAVE_MESSAGE;
 
 /**
  * Controller of the core proxy functionality; can be enabled by the proxy or external plugins that want to use the proxy functions.
@@ -149,7 +148,7 @@ public class ProxyController {
 
                 coreUserManager.runForEachOnline(user -> {
                     if (user.isOnline()) {
-                        discord.sendConnectEmbed(LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> {
+                        discord.sendConnectEmbed(Constants.LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> {
                             users.decrementAndGet();
                             disconnectLatch.countDown();
                         });

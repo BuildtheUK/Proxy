@@ -107,6 +107,10 @@
     <dependencies>
         <dependency>
             <groupId>org.btuk.proxy</groupId>
+            <artifactId>app</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.btuk.proxy</groupId>
             <artifactId>core</artifactId>
         </dependency>
         <dependency>

@@ -15,6 +15,7 @@
         <module>api</module>
         <module>core</module>
         <module>plugin</module>
+        <module>app</module>
     </modules>
 
     <properties>
@@ -71,17 +72,22 @@
             <!-- BTUK dependencies -->
             <dependency>
                 <groupId>org.btuk.proxy</groupId>
-                <artifactId>database</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.btuk.proxy</groupId>
                 <artifactId>api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.btuk.proxy</groupId>
-                <artifactId>core</artifactId>
+                <artifactId>app</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+            <groupId>org.btuk.proxy</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+            <dependency>
+                <groupId>org.btuk.proxy</groupId>
+                <artifactId>database</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
