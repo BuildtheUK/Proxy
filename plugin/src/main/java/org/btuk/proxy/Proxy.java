@@ -66,7 +66,6 @@ public class Proxy {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) throws IOException {
-
         this.proxyController = new ProxyController(getDataFolder());
 
         this.defaultServer = proxyController.getConfig().getString("default_server");

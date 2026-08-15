@@ -19,18 +19,18 @@
     </modules>
 
     <properties>
-        <java-version>21</java-version>
+        <java-version>25</java-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>${java-version}</maven.compiler.release>
 
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
 
-        <networklib.version>48f9c36fa5</networklib.version>
+        <networklib.version>5dee061bcb</networklib.version>
 
-        <velocity.version>3.5.0-SNAPSHOT</velocity.version>
+        <velocity.version>4.1.0-SNAPSHOT</velocity.version>
 
-        <lombok.version>1.18.34</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
 
         <log4j.version>2.25.2</log4j.version>
         <jul-to-slf4j.version>2.0.17</jul-to-slf4j.version>
@@ -81,10 +81,10 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-            <groupId>org.btuk.proxy</groupId>
-            <artifactId>core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+                <groupId>org.btuk.proxy</groupId>
+                <artifactId>core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.btuk.proxy</groupId>
                 <artifactId>database</artifactId>
@@ -166,4 +166,25 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>

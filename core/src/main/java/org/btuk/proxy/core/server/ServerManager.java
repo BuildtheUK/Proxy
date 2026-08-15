@@ -15,7 +15,6 @@ import org.btuk.proxy.core.utils.Time;
 import org.btuk.proxy.database.sql.GlobalSQL;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class ServerManager {
 
     private final CoreServerManager coreServerManager;
-
+    private final Scheduler scheduler;
     private final GlobalSQL globalSQL;
 
     private final ChatHandler chatHandler;
@@ -39,6 +38,7 @@ public class ServerManager {
 
     public ServerManager(CoreServerManager coreServerManager, Scheduler scheduler, GlobalSQL globalSQL, ChatHandler chatHandler, TabManager tabManager, CoreUserManager coreUserManager, UserManager userManager) {
         this.coreServerManager = coreServerManager;
+        this.scheduler = scheduler;
         this.globalSQL = globalSQL;
         this.chatHandler = chatHandler;
         this.tabManager = tabManager;
@@ -57,30 +57,30 @@ public class ServerManager {
     }
 
     public void addServer(ServerStartup serverStartup) {
-        // It is possible the server is already set to online, this probably means it crashed,
-        // first clear all players that are 'connected' to this server and remove them.
-        Optional<Server> optionalServer = coreServerManager.getServers().stream().filter(server -> server.getName().equals(serverStartup.getServerName())).findFirst();
-        optionalServer.ifPresent(this::removeServerDueToTimeout);
+        String serverName = serverStartup.getServerName();
+        // It is possible the server was already set to online, this probably means it crashed.
+        // Even if the server is not currently tracked, there might be 'ghost' players.
+        cleanupServer(serverName);
 
         try {
-            Server server = coreServerManager.createServer(serverStartup.getServerName());
+            Server server = coreServerManager.createServer(serverName);
             threadExecutor.submit(() -> addServerIfOnline(server));
         } catch (RuntimeException e) {
-            log.warning("Unable to add server " + serverStartup.getServerName() + ", it can not be found.");
+            log.warning("Unable to add server " + serverName + ", it can not be found.");
         }
     }
 
     public void removeServer(ServerShutdown serverShutdown) {
-        Optional<Server> optionalServer = coreServerManager.getServers().stream().filter(server -> server.getName().equals(serverShutdown.getServerName())).findFirst();
-        optionalServer.ifPresent(coreServerManager::removeServer);
-
-        // Set the server offline in the database.
-        globalSQL.update("UPDATE server_data SET online=0 WHERE name='" + serverShutdown.getServerName() + "';");
+        cleanupServer(serverShutdown.getServerName());
     }
 
     private void addServerIfOnline(Server server) {
+        addServerIfOnline(server, 0);
+    }
+
+    private void addServerIfOnline(Server server, int attempt) {
         // Skip if the server is already added.
-        if (coreServerManager.getServers().stream().anyMatch(server::equals)) {
+        if (coreServerManager.getServers().stream().anyMatch(s -> s.getName().equals(server.getName()))) {
             return;
         }
         if (server.canPing()) {
@@ -94,25 +94,29 @@ public class ServerManager {
             tabManager.sendAddTeam();
         } else {
             // The server is not online.
-            log.warning(String.format("Server " + server.getName() + " is not online."));
+            if (attempt < 30) {
+                scheduler.createDelayedTask(() -> threadExecutor.submit(() -> addServerIfOnline(server, attempt + 1)), 1, TimeUnit.SECONDS);
+            } else {
+                log.warning(String.format("Server " + server.getName() + " is not online."));
+            }
         }
     }
 
     private void pingServers() {
         coreServerManager.getServers().forEach(server -> threadExecutor.submit(() -> updatePing(server)));
-        // If any server has a ping of more than 120 seconds, set the server to offline and remove all online players that were connected to the server.
+        // If any server has a ping of more than 60 seconds, set the server to offline and remove all online players that were connected to the server.
         // This probably means the server crashed.
-        List<Server> offlineServers = coreServerManager.getServers().stream().filter(server -> server.getLastPing() < Time.currentTime() - 1000 * 120).toList();
+        List<Server> offlineServers = coreServerManager.getServers().stream().filter(server -> server.getLastPing() < Time.currentTime() - 1000 * 60).toList();
         offlineServers.forEach(this::removeServerDueToTimeout);
     }
 
-    private void removeServerDueToTimeout(Server server) {
+    private void cleanupServer(String serverName) {
         // Set the server offline in the database.
-        globalSQL.update("UPDATE server_data SET online=0 WHERE name='" + server.getName() + "';");
+        globalSQL.update("UPDATE server_data SET online=0 WHERE name='" + serverName + "';");
 
         // Remove all users connected to this server,
         // and also send a message to all other online servers to remove these users from their list.
-        List<User> offlineServerUsers = coreUserManager.getUsersOnServer(server.getName());
+        List<User> offlineServerUsers = coreUserManager.getUsersOnServer(serverName);
         offlineServerUsers.forEach(user -> {
                 OnlineUserRemove onlineUserRemove = new OnlineUserRemove(user.getUuid());
                 chatHandler.handle(onlineUserRemove);
@@ -120,8 +124,12 @@ public class ServerManager {
             }
         );
 
-        // Remove server from the list.
-        coreServerManager.removeServer(server);
+        // Remove server from the list if it exists.
+        coreServerManager.getServer(serverName).ifPresent(coreServerManager::removeServer);
+    }
+
+    private void removeServerDueToTimeout(Server server) {
+        cleanupServer(server.getName());
     }
 
     private void updatePing(Server server) {
