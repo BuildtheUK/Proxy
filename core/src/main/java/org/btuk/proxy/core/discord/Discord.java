@@ -119,7 +119,7 @@ public class Discord {
             this.moderatorChat = jda.getTextChannelById(moderatorChannel);
 
             //Load all members into cache.
-            chat.getGuild().loadMembers().onSuccess(members -> {
+            chat.getGuild().loadMembers().onSuccess(_ -> {
                 log.info("Loaded all discord members into cache");
 
                 //Enable role syncing.
@@ -135,7 +135,7 @@ public class Discord {
         jda.addEventListener(new DiscordChatListener(this, chatManager, chatChannelId, staffChannelId));
         jda.addEventListener(new BotChatListener(chatHandler, linking));
 
-        CommandManager commandManager = new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL);
+        CommandManager commandManager = new CommandManager(coreUserManager, tabManager, globalSQL, plotSQL, config);
         jda.addEventListener(commandManager);
         jda.getGuilds().forEach(commandManager::registerCommands);
     }
@@ -341,7 +341,7 @@ public class Discord {
             if (!member.getRoles().contains(role)) {
                 // If successful, resync if enabled.
                 chat.getGuild().addRoleToMember(member, role).queue(
-                        (user) -> {
+                        _ -> {
                             if (sync && hasRoles != null && giveRoles != null) {
                                 syncRoles();
                             }
@@ -371,7 +371,7 @@ public class Discord {
             // If the member does not have the role, add it.
             if (member.getRoles().contains(role)) {
                 chat.getGuild().removeRoleFromMember(member, role).queue(
-                        (user) -> {
+                        _ -> {
                             if (sync && hasRoles != null && giveRoles != null) {
                                 syncRoles();
                             }
