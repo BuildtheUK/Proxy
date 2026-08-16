@@ -9,6 +9,7 @@ import org.btuk.network.lib.dto.PrivateMessage;
 import org.btuk.network.lib.dto.ReplyMessage;
 import org.btuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.core.chat.automod.AutoMod;
+import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.user.CoreUserManager;
 import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.core.utils.Analytics;
@@ -39,17 +40,20 @@ public class ChatManager {
 
     private final AutoMod autoMod;
 
+    private final Discord discord;
+
     private static final List<String> SERVER_USERS = List.of(new String[]{SERVER_SENDER, DISCORD_SENDER});
 
     private static final String FOCUS_ENABLED_PRESET = "%s is in focus mode, unable to send message.";
 
-    public ChatManager(ChatHandler chatHandler, CoreUserManager userManager, Analytics analytics, GlobalSQL globalSQL, Moderation moderation, AutoMod autoMod) {
+    public ChatManager(ChatHandler chatHandler, CoreUserManager userManager, Analytics analytics, GlobalSQL globalSQL, Moderation moderation, AutoMod autoMod, Discord discord) {
         this.chatHandler = chatHandler;
         this.userManager = userManager;
         this.analytics = analytics;
         this.globalSQL = globalSQL;
         this.moderation = moderation;
         this.autoMod = autoMod;
+        this.discord = discord;
     }
 
     /**
@@ -68,6 +72,8 @@ public class ChatManager {
         if (player) {
             analytics.addMessage(chatMessage.getSender(), Time.getDate(Time.currentTime()));
         }
+        // Send the message to discord.
+        discord.handle(chatMessage);
     }
 
     /**

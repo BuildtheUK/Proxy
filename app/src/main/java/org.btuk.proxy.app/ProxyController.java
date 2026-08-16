@@ -115,7 +115,7 @@ public class ProxyController {
         Moderation moderation = new Moderation(globalSQL);
 
         AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
-        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
+        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod, discord);
 
         this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager,
                 analytics, discord, automod);
@@ -129,7 +129,7 @@ public class ProxyController {
         this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager);
         serverManager.initOnlineServers();
 
-        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, tabManager));
+        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager));
 
         proxyApi.start();
 

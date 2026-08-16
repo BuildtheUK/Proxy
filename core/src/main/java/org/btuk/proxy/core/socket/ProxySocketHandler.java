@@ -25,7 +25,6 @@ import org.btuk.network.lib.socket.SocketHandler;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.server.ServerManager;
-import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.user.UserManager;
 
 @Log
@@ -35,14 +34,12 @@ public class ProxySocketHandler implements SocketHandler {
     private final Discord discord;
     private final UserManager userManager;
     private final ServerManager serverManager;
-    private final TabManager tabManager;
 
-    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager, TabManager tabManager) {
+    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager) {
         this.chatManager = chatManager;
         this.discord = discord;
         this.userManager = userManager;
         this.serverManager = serverManager;
-        this.tabManager = tabManager;
     }
 
     @Override
@@ -51,7 +48,6 @@ public class ProxySocketHandler implements SocketHandler {
         switch (abstractTransferObject) {
             case ChatMessage chatMessage -> {
                 chatManager.handle(chatMessage);
-                discord.handle(chatMessage);
             }
             case DirectMessage directMessage -> chatManager.handle(directMessage);
             case PrivateMessage privateMessage -> chatManager.handle(privateMessage);
