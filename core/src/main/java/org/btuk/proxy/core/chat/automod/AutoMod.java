@@ -17,7 +17,6 @@ import org.btuk.proxy.core.utils.Time;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
@@ -92,7 +91,7 @@ public class AutoMod {
      * @return true if the message should be blocked
      */
     private boolean checkMessage(User user, String message) {
-        Map<String, CandidateWord> candidateWords = AutoModRule.getCandidateWords(message);
+        List<CandidateWord> candidateWords = AutoModRule.getCandidateWords(message);
         boolean blockMessage = false;
         for (AutoModRule rule : autoModConfig.getRules()) {
             blockMessage |= checkRule(rule, candidateWords, user, message);
@@ -122,7 +121,7 @@ public class AutoMod {
         }
     }
 
-    private boolean checkRule(AutoModRule rule, Map<String, CandidateWord> candidateWords, User user, String message) {
+    private boolean checkRule(AutoModRule rule, List<CandidateWord> candidateWords, User user, String message) {
         List<AutoModMatch> matches = rule.getMatches(candidateWords);
         if (matches.isEmpty()) {
             return false;

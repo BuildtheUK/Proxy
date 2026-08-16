@@ -4,13 +4,13 @@ import lombok.Getter;
 
 import java.text.Normalizer;
 import java.time.Duration;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public abstract class AutoModRule {
 
@@ -28,10 +28,20 @@ public abstract class AutoModRule {
 
     public AutoModRule(String id, List<String> flaggedWords, Duration duration) {
         this.id = id;
-        this.flaggedWords = flaggedWords.stream()
-            .map(AutoModRule::normalize)
-            .filter(word -> !word.isBlank())
-            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        java.util.Set<String> normalizedSet = new java.util.HashSet<>();
+        for (String word : flaggedWords) {
+            String normalized = normalize(word);
+            List<String> tokens = new ArrayList<>();
+            Matcher matcher = TOKEN_PATTERN.matcher(normalized);
+            while (matcher.find()) {
+                tokens.add(matcher.group());
+            }
+            if (tokens.isEmpty()) continue;
+
+            normalizedSet.add(String.join(" ", tokens));
+            normalizedSet.add(String.join("", tokens));
+        }
+        this.flaggedWords = java.util.Collections.unmodifiableSet(normalizedSet);
         this.duration = duration;
     }
 
@@ -40,58 +50,90 @@ public abstract class AutoModRule {
     /**
      * Matches words against flagged words.
      *
-     * @param candidateWords map of candidate words keyed by normalized value
+     * @param candidateWords list of candidate words in order
      * @return list of matches
      */
-    public List<AutoModMatch> getMatches(Map<String, CandidateWord> candidateWords) {
-        return candidateWords.values().stream()
-            .filter(candidateWord -> flaggedWords.contains(candidateWord.normalized()))
-            .flatMap(candidateWord -> candidateWord.originals().stream()
-                .map(original -> new AutoModMatch(original, candidateWord.normalized())))
-            .toList();
+    public List<AutoModMatch> getMatches(List<CandidateWord> candidateWords) {
+        List<AutoModMatch> matches = new ArrayList<>();
+        int n = candidateWords.size();
+        for (int i = 0; i < n; i++) {
+            // Check single word and phrases up to 10 tokens
+            for (int len = 1; len <= 10 && i + len <= n; len++) {
+                List<CandidateWord> sub = candidateWords.subList(i, i + len);
+
+                // Try joining with spaces
+                String normalizedPhrase = sub.stream()
+                        .map(CandidateWord::normalized)
+                        .collect(Collectors.joining(" "));
+
+                if (flaggedWords.contains(normalizedPhrase)) {
+                    String originalPhrase = sub.stream()
+                            .map(CandidateWord::original)
+                            .collect(Collectors.joining(" "));
+                    matches.add(new AutoModMatch(originalPhrase, normalizedPhrase));
+                    continue;
+                }
+
+                // Try joining without spaces to catch things like "f u c k" if "fuck" is flagged
+                String noSpacePhrase = sub.stream()
+                        .map(CandidateWord::normalized)
+                        .collect(Collectors.joining(""));
+                if (flaggedWords.contains(noSpacePhrase)) {
+                    String originalPhrase = sub.stream()
+                            .map(CandidateWord::original)
+                            .collect(Collectors.joining(""));
+                    matches.add(new AutoModMatch(originalPhrase, noSpacePhrase));
+                }
+            }
+        }
+        return matches;
     }
 
     /**
-     * Gets a map of candidate words based on a message.
+     * Gets a list of candidate words based on a message.
      *
      * @param message the message to get candidates for
-     * @return map of candidate words keyed by normalized value
+     * @return list of candidate words in order
      */
-    public static LinkedHashMap<String, CandidateWord> getCandidateWords(String message) {
-        LinkedHashMap<String, CandidateWord> candidates = new LinkedHashMap<>();
-
-        Matcher tokenMatcher = TOKEN_PATTERN.matcher(message);
-        while (tokenMatcher.find()) {
-            String originalToken = tokenMatcher.group();
-            String normalizedToken = normalize(originalToken);
-
-            addCandidate(candidates, normalizedToken, originalToken);
-        }
+    public static List<CandidateWord> getCandidateWords(String message) {
+        List<CandidateWord> candidates = new ArrayList<>();
 
         Matcher chunkMatcher = NON_WHITESPACE_PATTERN.matcher(message);
         while (chunkMatcher.find()) {
             String originalChunk = chunkMatcher.group();
-
-            // Plain alphanumeric words are already handled by TOKEN_PATTERN,
-            // so only process chunks that contain punctuation/symbols.
-            if (originalChunk.chars().allMatch(Character::isLetterOrDigit)) {
-                continue;
-            }
-
             String normalizedChunk = NON_ALPHANUMERIC.matcher(normalize(originalChunk)).replaceAll("");
 
-            addCandidate(candidates, normalizedChunk, originalChunk);
+            if (normalizedChunk.isBlank()) continue;
+
+            // Try to see if this chunk contains multiple words
+            Matcher tokenMatcher = TOKEN_PATTERN.matcher(originalChunk);
+            List<String> subTokens = new ArrayList<>();
+            while (tokenMatcher.find()) {
+                subTokens.add(tokenMatcher.group());
+            }
+
+            if (subTokens.size() > 1) {
+                // If it contains multi-character tokens, it's likely multiple words (e.g., "bad-word")
+                if (subTokens.stream().anyMatch(t -> t.length() > 1)) {
+                    for (String sub : subTokens) {
+                        candidates.add(new CandidateWord(normalize(sub), sub));
+                    }
+                    // Also add the combined version if it's different from simple concatenation
+                    String joinedSub = subTokens.stream().map(AutoModRule::normalize).collect(Collectors.joining(""));
+                    if (!normalizedChunk.equals(joinedSub)) {
+                        candidates.add(new CandidateWord(normalizedChunk, originalChunk));
+                    }
+                } else {
+                    // All single letters, likely a single word broken up (e.g., "b.a.d")
+                    candidates.add(new CandidateWord(normalizedChunk, originalChunk));
+                }
+            } else {
+                // Single token or no sub-tokens (punctuation only)
+                candidates.add(new CandidateWord(normalizedChunk, originalChunk));
+            }
         }
 
         return candidates;
-    }
-
-    private static void addCandidate(LinkedHashMap<String, CandidateWord> candidates, String normalized, String original) {
-        if (normalized.isBlank() || original.isBlank()) {
-            return;
-        }
-
-        candidates.computeIfAbsent(normalized, CandidateWord::new).addOriginal(original);
     }
 
     private static String normalize(String input) {
