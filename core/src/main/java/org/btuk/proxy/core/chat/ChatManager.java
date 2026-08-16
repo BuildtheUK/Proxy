@@ -73,7 +73,9 @@ public class ChatManager {
             analytics.addMessage(chatMessage.getSender(), Time.getDate(Time.currentTime()));
         }
         // Send the message to discord.
-        discord.handle(chatMessage);
+        if (player) {
+            discord.handle(chatMessage);
+        }
     }
 
     /**
