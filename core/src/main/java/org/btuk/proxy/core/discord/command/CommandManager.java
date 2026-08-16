@@ -106,6 +106,11 @@ public class CommandManager extends ListenerAdapter {
             commands.add(new Map("progressmap", "Sends a link to the UK progress map.", progressMap));
         }
 
+        String websiteLink = config.getString("website");
+        if (websiteLink != null && !websiteLink.isBlank()) {
+            commands.add(new Website("website", "Sends a link of the website",  websiteLink));
+        }
+
         commands.add(new ClaimedPlots(globalSQL, plotSQL, "claimedplots", "List all plots that are currently claimed.", playerOption));
         commands.add(new SubmittedPlots(globalSQL, plotSQL, "submittedplots", "List all plots that are currently submitted.", playerOption));
         commands.add(new ActivePlots(globalSQL, plotSQL, "activeplots", "List all plots that are currently claimed or submitted.", playerOption));
