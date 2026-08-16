@@ -1,5 +1,7 @@
 package org.btuk.proxy.api.impl;
 
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.btuk.network.lib.dto.DirectMessage;
 import org.btuk.network.lib.utils.ChatUtils;
@@ -16,12 +18,13 @@ import java.util.stream.Collectors;
 
 import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
-
+@Path("/player")
 public class PlayerApiImpl implements PlayerApi {
 
     private final GlobalSQL globalSQL;
     private final ChatManager chatManager;
 
+    @Inject
     public PlayerApiImpl(GlobalSQL globalSQL, ChatManager chatManager) {
         this.globalSQL = globalSQL;this.chatManager = chatManager;
     }

@@ -84,7 +84,7 @@ paths:
       responses:
         "201":
           description: Message Added
-  /players/online:
+  /player/online:
     get:
       tags:
         - Player

@@ -9,6 +9,7 @@ import org.btuk.proxy.database.sql.GlobalSQL;
 
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 
 import java.net.URI;
@@ -43,10 +44,34 @@ public class ProxyApi {
 
         String baseUri = "http://0.0.0.0:" + apiPort + "/api/";
 
-        ResourceConfig rc = new ResourceConfig()
-            .register(new StatusApiImpl())
-            .register(new PlayerApiImpl(globalSQL,chatManager))
-            .register(new BuildingsApiImpl(globalSQL));
+
+        ResourceConfig rc = new ResourceConfig();
+
+        // 1. Disable WADL warning
+        rc.property("jersey.config.server.wadl.disableWadl", true);
+
+        // 2. Bind SQL and ChatManager dependencies for injection
+        rc.register(new AbstractBinder() {
+            @Override
+            protected void configure() {
+                bind(globalSQL).to(GlobalSQL.class);
+                bind(chatManager).to(ChatManager.class);
+            }
+        });
+
+        // 3. Register the implementation CLASSES (or scan the package)
+        rc.register(StatusApiImpl.class);
+        rc.register(PlayerApiImpl.class);
+        rc.register(BuildingsApiImpl.class);
+
+//        ResourceConfig rc = new ResourceConfig()
+//                .property("jersey.config.server.wadl.disableWadl", true)
+//                .packages("org.btuk.proxy.api.impl");
+
+//        ResourceConfig rc = new ResourceConfig()
+//            .register(new StatusApiImpl())
+//            .register(new PlayerApiImpl(globalSQL,chatManager))
+//            .register(new BuildingsApiImpl(globalSQL));
 
         try {
             server = GrizzlyHttpServerFactory.createHttpServer(URI.create(baseUri), rc);
