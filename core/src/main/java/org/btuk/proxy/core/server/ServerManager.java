@@ -1,6 +1,7 @@
 package org.btuk.proxy.core.server;
 
 import lombok.extern.java.Log;
+
 import org.btuk.network.lib.dto.OnlineUserRemove;
 import org.btuk.network.lib.dto.OnlineUsersReply;
 import org.btuk.network.lib.dto.ServerShutdown;
@@ -114,15 +115,21 @@ public class ServerManager {
         // Set the server offline in the database.
         globalSQL.update("UPDATE server_data SET online=0 WHERE name='" + serverName + "';");
 
-        // Remove all users connected to this server,
+        // Remove all users connected to this server
         // and also send a message to all other online servers to remove these users from their list.
-        List<User> offlineServerUsers = coreUserManager.getUsersOnServer(serverName);
-        offlineServerUsers.forEach(user -> {
-                OnlineUserRemove onlineUserRemove = new OnlineUserRemove(user.getUuid());
-                chatHandler.handle(onlineUserRemove);
-                userManager.disconnectUser(user);
-            }
-        );
+        // Delay this by a second so the switch server events have time to be processed.
+        scheduler.createDelayedTask(() -> {
+            List<User> offlineServerUsers = coreUserManager.getUsersOnServer(serverName);
+            offlineServerUsers.forEach(user -> {
+                if (user.getSwitchServer() != null && user.getSwitchServer().getFromServer().equals(serverName)) {
+                    log.info("User " + user.getName() + " is switching servers on shutdown.");
+                } else {
+                    OnlineUserRemove onlineUserRemove = new OnlineUserRemove(user.getUuid());
+                    chatHandler.handle(onlineUserRemove);
+                    userManager.disconnectUser(user);
+                }
+            });
+        }, 1, TimeUnit.SECONDS);
 
         // Remove server from the list if it exists.
         coreServerManager.getServer(serverName).ifPresent(coreServerManager::removeServer);

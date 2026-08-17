@@ -131,9 +131,9 @@ public class UserManager {
             return;
         }
 
-        if (user.isBlockNextDisconnect()) {
-            log.warning("User has already reconnected, cancelling disconnect.");
-            user.setBlockNextDisconnect(false);
+        // If the player is not on the server they disconnected from, it implies they switched server.
+        if (!user.getServer().equals(disconnect.getServer())) {
+            log.warning("User disconnect received but they are on a different server, cancelling disconnect.");
             return;
         }
 
@@ -289,11 +289,8 @@ public class UserManager {
                 switchServer.cancelTimeout();
                 user.setSwitchServer(null);
 
+                user.cancelDisconnectTask();
             } else {
-                // If the user is still online, quickly cancel the disconnect event.
-                if (user.isOnline()) {
-                    user.setBlockNextDisconnect(true);
-                }
                 // Cancel disconnect task.
                 user.reconnect();
 

@@ -134,10 +134,6 @@ public class User {
 
     @Getter
     @Setter
-    private boolean blockNextDisconnect = false;
-
-    @Getter
-    @Setter
     private int previousPlotSubmissionCount = 0;
 
     @Getter
@@ -240,6 +236,10 @@ public class User {
         online = true;
         // Can't be afk on reconnect.
         afk = false;
+        cancelDisconnectTask();
+    }
+
+    public void cancelDisconnectTask() {
         if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
             disconnectTask.cancel();
         }
@@ -250,10 +250,7 @@ public class User {
      * Delete the user instance.
      */
     public void delete() {
-        // If the disconnectTask is running cancel.
-        if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
-            disconnectTask.cancel();
-        }
+        cancelDisconnectTask();
     }
 
     public void mute(User user) {
