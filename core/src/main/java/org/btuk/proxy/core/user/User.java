@@ -222,6 +222,8 @@ public class User {
 
         analytics.save(this, Time.getDate(time), time);
         online = false;
+        // Ensure no existing disconnect exists.
+        cancelDisconnectTask();
         // Run a delayed task to remove the user.
         disconnectTask = scheduler.createDelayedTask(runnable, 5L, TimeUnit.MINUTES);
     }
