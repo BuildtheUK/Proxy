@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.BTEUK</groupId>
+            <groupId>com.github.BuildtheUK</groupId>
             <artifactId>NetworkLib</artifactId>
         </dependency>
 
@@ -42,16 +42,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
             </plugin>
         </plugins>
     </build>

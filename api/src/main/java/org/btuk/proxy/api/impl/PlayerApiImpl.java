@@ -1,8 +1,10 @@
 package org.btuk.proxy.api.impl;
 
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.utils.ChatUtils;
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.api.PlayerApi;
 import org.btuk.proxy.api.model.Message;
 import org.btuk.proxy.api.model.Player;
@@ -14,14 +16,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static net.bteuk.network.lib.enums.ChatChannels.GLOBAL;
+import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
-
+@Path("/player")
 public class PlayerApiImpl implements PlayerApi {
 
     private final GlobalSQL globalSQL;
     private final ChatManager chatManager;
 
+    @Inject
     public PlayerApiImpl(GlobalSQL globalSQL, ChatManager chatManager) {
         this.globalSQL = globalSQL;this.chatManager = chatManager;
     }
@@ -63,7 +66,7 @@ public class PlayerApiImpl implements PlayerApi {
 
         try {
             String messagePlainText = message.getMessage();
-            DirectMessage m = new DirectMessage(GLOBAL.getChannelName(), playerID.toString(), SERVER_SENDER, ChatUtils.success(messagePlainText), true);
+            DirectMessage m = new DirectMessage(GLOBAL.getChannelName(), playerID, SERVER_SENDER, ChatUtils.success(messagePlainText), true);
             chatManager.sendDirectMessage(m);
             return Response.status(Response.Status.CREATED).build();
         }catch (Exception e)

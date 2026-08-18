@@ -1,6 +1,6 @@
 package org.btuk.proxy.core.user;
 
-import net.bteuk.network.lib.dto.OnlineUser;
+import org.btuk.network.lib.dto.OnlineUser;
 
 import java.util.ArrayList;
 import java.util.Collections;

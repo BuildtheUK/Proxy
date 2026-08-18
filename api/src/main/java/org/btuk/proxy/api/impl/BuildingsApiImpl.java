@@ -1,5 +1,7 @@
 package org.btuk.proxy.api.impl;
 
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.btuk.proxy.api.BuildingsApi;
 import org.btuk.proxy.api.model.Building;
@@ -17,16 +19,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Path("/buildings")
 public class BuildingsApiImpl implements BuildingsApi {
 
     private final GlobalSQL globalSQL;
 
+    @Inject
     public BuildingsApiImpl(GlobalSQL globalSQL) {
         this.globalSQL = globalSQL;
     }
-
-
-
 
     @Override
     public Response getBuildingsByArea(Double minLat, Double maxLat, Double minLon, Double maxLon, UUID playerUuid) {

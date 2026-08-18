@@ -10,20 +10,17 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import lombok.Getter;
-import net.bteuk.network.lib.socket.InputSocket;
-
+import org.btuk.network.lib.socket.InputSocket;
+import org.btuk.proxy.app.ProxyController;
 import org.btuk.proxy.chat.ProxyChatHandler;
-
+import org.btuk.proxy.core.socket.ProxySocketHandler;
 import org.btuk.proxy.listener.CommandListener;
 import org.btuk.proxy.listener.ServerConnectListener;
 import org.btuk.proxy.player.ProxyPlayerManager;
 import org.btuk.proxy.scheduler.ProxyScheduler;
 import org.btuk.proxy.server.ProxyCoreServerManager;
-import org.btuk.proxy.core.socket.ProxySocketHandler;
-
 import org.btuk.proxy.tab.ProxyTabManager;
 import org.slf4j.Logger;
-
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,7 +35,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-@Plugin(id = "proxy", name = "Proxy", version = "1.12.0-SNAPSHOT",
+@Plugin(id = "proxy", name = "Proxy", version = "1.13.0-SNAPSHOT",
         url = "https://github.com/BTEUK/Proxy", description = "Proxy plugin, managed chat, discord and server related actions.", authors = {"ELgamer"})
 public class Proxy {
 
@@ -69,7 +66,6 @@ public class Proxy {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) throws IOException {
-
         this.proxyController = new ProxyController(getDataFolder());
 
         this.defaultServer = proxyController.getConfig().getString("default_server");

@@ -1,14 +1,20 @@
 package org.btuk.proxy.core.tab;
 
 import lombok.Getter;
-import net.bteuk.network.lib.dto.AddTeamEvent;
-import net.bteuk.network.lib.dto.TabPlayer;
-import net.bteuk.network.lib.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.btuk.network.lib.dto.AddTeamEvent;
+import org.btuk.network.lib.dto.TabPlayer;
+import org.btuk.network.lib.utils.ChatUtils;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.player.Player;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.User;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -16,13 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.config.Config;
-import org.btuk.proxy.core.player.Player;
-import org.btuk.proxy.core.scheduler.Scheduler;
-import org.btuk.proxy.core.user.CoreUserManager;
-import org.btuk.proxy.core.user.User;
 
 public abstract class AbstractTabManager implements TabManager {
 
