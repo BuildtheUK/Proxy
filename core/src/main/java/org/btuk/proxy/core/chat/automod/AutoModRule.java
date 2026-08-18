@@ -26,7 +26,10 @@ public abstract class AutoModRule {
     @Getter
     private final Duration duration;
 
+    private final int maxLength;
+
     public AutoModRule(String id, List<String> flaggedWords, Duration duration) {
+        int maxLength = 0;
         this.id = id;
         java.util.Set<String> normalizedSet = new java.util.HashSet<>();
         for (String word : flaggedWords) {
@@ -39,10 +42,13 @@ public abstract class AutoModRule {
             if (tokens.isEmpty()) continue;
 
             normalizedSet.add(String.join(" ", tokens));
-            normalizedSet.add(String.join("", tokens));
+            String joined = String.join("", tokens);
+            maxLength = Math.max(maxLength, joined.length());
+            normalizedSet.add(joined);
         }
         this.flaggedWords = java.util.Collections.unmodifiableSet(normalizedSet);
         this.duration = duration;
+        this.maxLength = maxLength;
     }
 
     public abstract boolean blockMessage();
@@ -57,8 +63,8 @@ public abstract class AutoModRule {
         List<AutoModMatch> matches = new ArrayList<>();
         int n = candidateWords.size();
         for (int i = 0; i < n; i++) {
-            // Check single word and phrases up to 10 tokens
-            for (int len = 1; len <= 10 && i + len <= n; len++) {
+            // Check single word and phrases up to maxLength tokens.
+            for (int len = 1; len <= maxLength && i + len <= n; len++) {
                 List<CandidateWord> sub = candidateWords.subList(i, i + len);
 
                 // Try joining with spaces
@@ -74,7 +80,7 @@ public abstract class AutoModRule {
                     continue;
                 }
 
-                // Try joining without spaces to catch things like "f u c k" if "fuck" is flagged
+                // Try joining without spaces to catch things like "b a d" if "bad" is flagged
                 String noSpacePhrase = sub.stream()
                         .map(CandidateWord::normalized)
                         .collect(Collectors.joining(""));
