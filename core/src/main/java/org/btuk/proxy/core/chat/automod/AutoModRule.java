@@ -19,6 +19,8 @@ public abstract class AutoModRule {
     private static final Pattern NON_WHITESPACE_PATTERN = Pattern.compile("\\S+");
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^\\p{L}\\p{N}]");
 
+    private static final char SPACE = ' ';
+
     private final Set<String> flaggedWords;
     @Getter
     private final String id;
@@ -61,34 +63,45 @@ public abstract class AutoModRule {
      */
     public List<AutoModMatch> getMatches(List<CandidateWord> candidateWords) {
         List<AutoModMatch> matches = new ArrayList<>();
-        int n = candidateWords.size();
-        for (int i = 0; i < n; i++) {
-            // Check single word and phrases up to maxLength tokens.
-            for (int len = 1; len <= maxLength && i + len <= n; len++) {
-                List<CandidateWord> sub = candidateWords.subList(i, i + len);
+        int totalCandidates = candidateWords.size();
+        for (int i = 0; i < totalCandidates; i++) {
+            StringBuilder sbNormalizedWithSpaces = new StringBuilder();
+            StringBuilder sbNormalizedNoSpaces = new StringBuilder();
 
-                // Try joining with spaces
-                String normalizedPhrase = sub.stream()
-                        .map(CandidateWord::normalized)
-                        .collect(Collectors.joining(" "));
+            for (int j = i; j < totalCandidates; j++) {
+                CandidateWord cw = candidateWords.get(j);
+                String normalized = cw.normalized();
 
-                if (flaggedWords.contains(normalizedPhrase)) {
-                    String originalPhrase = sub.stream()
-                            .map(CandidateWord::original)
-                            .collect(Collectors.joining(" "));
-                    matches.add(new AutoModMatch(originalPhrase, normalizedPhrase));
-                    continue;
+                sbNormalizedNoSpaces.append(normalized);
+                if (sbNormalizedNoSpaces.length() > maxLength) {
+                    break;
                 }
 
-                // Try joining without spaces to catch things like "b a d" if "bad" is flagged
-                String noSpacePhrase = sub.stream()
-                        .map(CandidateWord::normalized)
-                        .collect(Collectors.joining(""));
-                if (flaggedWords.contains(noSpacePhrase)) {
-                    String originalPhrase = sub.stream()
-                            .map(CandidateWord::original)
-                            .collect(Collectors.joining(""));
-                    matches.add(new AutoModMatch(originalPhrase, noSpacePhrase));
+                if (j > i) {
+                    sbNormalizedWithSpaces.append(SPACE);
+                }
+                sbNormalizedWithSpaces.append(normalized);
+
+                String phraseWithSpaces = sbNormalizedWithSpaces.toString();
+                if (flaggedWords.contains(phraseWithSpaces)) {
+                    StringBuilder sbOriginal = new StringBuilder();
+                    for (int k = i; k <= j; k++) {
+                        if (k > i) {
+                            sbOriginal.append(SPACE);
+                        }
+                        sbOriginal.append(candidateWords.get(k).original());
+                    }
+                    matches.add(new AutoModMatch(sbOriginal.toString(), phraseWithSpaces));
+                } else if (j > i) {
+                    // Try joining without spaces to catch things like "b a d" if "bad" is flagged
+                    String phraseNoSpaces = sbNormalizedNoSpaces.toString();
+                    if (flaggedWords.contains(phraseNoSpaces)) {
+                        StringBuilder sbOriginal = new StringBuilder();
+                        for (int k = i; k <= j; k++) {
+                            sbOriginal.append(candidateWords.get(k).original());
+                        }
+                        matches.add(new AutoModMatch(sbOriginal.toString(), phraseNoSpaces));
+                    }
                 }
             }
         }
@@ -120,12 +133,23 @@ public abstract class AutoModRule {
 
             if (subTokens.size() > 1) {
                 // If it contains multi-character tokens, it's likely multiple words (e.g., "bad-word")
-                if (subTokens.stream().anyMatch(t -> t.length() > 1)) {
+                boolean hasMultiCharToken = false;
+                for (String token : subTokens) {
+                    if (token.length() > 1) {
+                        hasMultiCharToken = true;
+                        break;
+                    }
+                }
+
+                if (hasMultiCharToken) {
+                    StringBuilder joinedSubBuilder = new StringBuilder();
                     for (String sub : subTokens) {
-                        candidates.add(new CandidateWord(normalize(sub), sub));
+                        String normalizedSub = normalize(sub);
+                        candidates.add(new CandidateWord(normalizedSub, sub));
+                        joinedSubBuilder.append(normalizedSub);
                     }
                     // Also add the combined version if it's different from simple concatenation
-                    String joinedSub = subTokens.stream().map(AutoModRule::normalize).collect(Collectors.joining(""));
+                    String joinedSub = joinedSubBuilder.toString();
                     if (!normalizedChunk.equals(joinedSub)) {
                         candidates.add(new CandidateWord(normalizedChunk, originalChunk));
                     }
