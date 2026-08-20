@@ -187,4 +187,26 @@ public class PlotSQL extends AbstractSQL {
             return corners;
         }
     }
+
+    public int getPlayerTotalReviews(String uuid){
+        if (uuid == null) {
+            log.warning("getPlayerTotalReviews called with null uuid");
+            return 0;
+        }
+
+        final String sql = "SELECT COUNT(*) FROM plot_review WHERE reviewer = ?;";
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, uuid);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return results.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("An error occurred while fetching total reviews for " + uuid + ": " + e.getMessage());
+        }
+        return 0;
+    }
 }

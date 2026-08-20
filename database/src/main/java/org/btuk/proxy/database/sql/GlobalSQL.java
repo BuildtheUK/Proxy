@@ -6,6 +6,8 @@ import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.dto.BuildingDTO;
 import org.btuk.proxy.database.dto.GridCellDTO;
 import org.btuk.proxy.database.dto.PlayerDTO;
+import org.btuk.proxy.database.dto.TotalBaseStats;
+import org.btuk.proxy.database.dto.PlayerBaseStats;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -436,4 +438,73 @@ public class GlobalSQL extends AbstractSQL {
         }
         return cells;
     }
+
+    /**
+     * Retrieves overall base statistics.
+     * Counts total buildings and recent buildings added within the last 30 days.
+     */
+    public TotalBaseStats getTotalBaseStats() {
+        final String sql = """
+            SELECT 
+                (SELECT COUNT(*) FROM buildings) AS total_buildings,
+                (SELECT COUNT(*) FROM buildings WHERE time_added >= NOW() - INTERVAL 30 DAY) AS recent_buildings,
+            (SELECT COUNT(*) FROM buildings WHERE time_added < NOW() - INTERVAL 30 DAY AND time_added >= NOW() - INTERVAL 60 DAY) AS previous_buildings;
+            """;
+
+        try (Connection conn = conn();
+             PreparedStatement statement = conn.prepareStatement(sql);
+             ResultSet results = statement.executeQuery()) {
+
+            if (results.next()) {
+                return new TotalBaseStats(
+                        results.getInt("total_buildings"),
+                        results.getInt("recent_buildings"),
+                        results.getInt("previous_buildings")
+                );
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to fetch total base stats: " + e.getMessage());
+        }
+        return new TotalBaseStats(0, 0,0);
+    }
+
+    /**
+     * Retrieves aggregated statistics for a specific player by UUID.
+     */
+    public PlayerBaseStats getPlayerBaseStats(String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            log.warning("getPlayerBaseStats called with null or empty uuid");
+            return null;
+        }
+
+        final String sql = """
+            SELECT 
+                (SELECT COUNT(*) FROM buildings WHERE player_id = ?) AS buildings,
+                (SELECT COALESCE(SUM(tpll), 0) FROM statistics WHERE uuid = ?) AS tplls,
+                (SELECT COALESCE(SUM(playtime), 0) FROM statistics WHERE uuid = ?) AS time_played,
+                (SELECT COALESCE(SUM(messages), 0) FROM statistics WHERE uuid = ?) AS messages_sent;
+            """;
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, uuid);
+            statement.setString(2, uuid);
+            statement.setString(3, uuid);
+            statement.setString(4, uuid);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return new PlayerBaseStats(
+                            results.getInt("buildings"),
+                            results.getInt("tplls"),
+                            results.getInt("time_played"),
+                            results.getInt("messages_sent")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("Failed to fetch player base stats for " + uuid + ": " + e.getMessage());
+        }
+        return null;
+    }
+
 }
