@@ -19,6 +19,8 @@ public interface TabManager {
 
     void sendAddTeam();
 
+    void sendAddTeam(TabPlayer tabPlayer);
+
     void sendTablist(User user);
 
     Optional<TabPlayer> getTabPlayer(String uuid);

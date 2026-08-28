@@ -3,6 +3,7 @@ package org.btuk.proxy.app;
 import lombok.Getter;
 import lombok.extern.java.Log;
 import org.btuk.network.lib.dto.OnlineUserRemove;
+import org.btuk.network.lib.dto.ProxyStart;
 import org.btuk.proxy.api.server.ProxyApi;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.chat.ChatManager;
@@ -130,6 +131,9 @@ public class ProxyController {
         serverManager.initOnlineServers();
 
         socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager));
+
+        // Broadcast proxy startup to all configured servers.
+        chatHandler.handle(new ProxyStart(System.currentTimeMillis()));
 
         proxyApi.start();
 

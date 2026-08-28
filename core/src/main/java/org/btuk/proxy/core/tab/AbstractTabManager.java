@@ -71,8 +71,6 @@ public abstract class AbstractTabManager implements TabManager {
                 addPlayerToTabList(player, user, tabPlayer);
             }
         });
-        // Send the add team event to servers.
-        sendAddTeam(tabPlayer);
     }
 
     /**
@@ -201,7 +199,8 @@ public abstract class AbstractTabManager implements TabManager {
         return name;
     }
 
-    private void sendAddTeam(TabPlayer tabPlayer) {
+    @Override
+    public void sendAddTeam(TabPlayer tabPlayer) {
         chatHandler.handle(new AddTeamEvent(tabPlayer.getName(), tabPlayer.getPrimaryGroup()));
     }
 

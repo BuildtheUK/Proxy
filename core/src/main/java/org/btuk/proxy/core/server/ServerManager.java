@@ -7,6 +7,7 @@ import org.btuk.network.lib.dto.OnlineUsersReply;
 import org.btuk.network.lib.dto.ServerShutdown;
 import org.btuk.network.lib.dto.ServerStartup;
 import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.exceptions.ServerNotFoundException;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.user.CoreUserManager;
@@ -91,7 +92,11 @@ public class ServerManager {
             globalSQL.update("UPDATE server_data SET online=1 WHERE name='" + server.getName() + "';");
 
             // Send all online users to the server as a reply.
-            chatHandler.handle(new OnlineUsersReply(coreUserManager.getOnlineUsers()));
+            try {
+                chatHandler.handle(new OnlineUsersReply(coreUserManager.getOnlineUsers()), server.getName());
+            } catch (ServerNotFoundException e) {
+                log.severe("Failed to send online users to server " + server.getName() + ": " + e.getMessage());
+            }
             tabManager.sendAddTeam();
         } else {
             // The server is not online.
@@ -123,7 +128,7 @@ public class ServerManager {
             offlineServerUsers.forEach(user -> {
                 if (user.getSwitchServer() != null && user.getSwitchServer().getFromServer().equals(serverName)) {
                     log.info("User " + user.getName() + " is switching servers on shutdown.");
-                } else {
+                } else if (user.isOnline()) {
                     OnlineUserRemove onlineUserRemove = new OnlineUserRemove(user.getUuid());
                     chatHandler.handle(onlineUserRemove);
                     userManager.disconnectUser(user);

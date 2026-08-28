@@ -349,6 +349,9 @@ public class UserManager {
         // Send the tab list to the user.
         tabManager.sendTablist(user);
 
+        // Send an add team event to ensure tab sorting works.
+        tabManager.sendAddTeam(request.getTabPlayer());
+
         return user;
     }
 
