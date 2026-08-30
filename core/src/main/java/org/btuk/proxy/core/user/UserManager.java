@@ -2,37 +2,55 @@ package org.btuk.proxy.core.user;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.*;
-import net.bteuk.network.lib.enums.ChatChannels;
-import net.bteuk.network.lib.enums.ModerationAction;
-import net.bteuk.network.lib.enums.TeleportRequestType;
-import net.bteuk.network.lib.utils.ChatUtils;
-import org.btuk.proxy.database.sql.GlobalSQL;
-import org.btuk.proxy.database.sql.PlotSQL;
-import org.btuk.proxy.database.sql.RegionSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-
-import java.awt.Color;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import org.btuk.proxy.core.chat.automod.AutoMod;
-import org.btuk.proxy.core.discord.Discord;
-import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.network.lib.dto.ChatMessage;
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.dto.FocusEvent;
+import org.btuk.network.lib.dto.ModerationEvent;
+import org.btuk.network.lib.dto.MuteEvent;
+import org.btuk.network.lib.dto.OnlineUser;
+import org.btuk.network.lib.dto.OnlineUserAdd;
+import org.btuk.network.lib.dto.OnlineUserRemove;
+import org.btuk.network.lib.dto.PlotMessage;
+import org.btuk.network.lib.dto.SwitchServerEvent;
+import org.btuk.network.lib.dto.TeleportEvent;
+import org.btuk.network.lib.dto.UserConnectReply;
+import org.btuk.network.lib.dto.UserConnectRequest;
+import org.btuk.network.lib.dto.UserDisconnect;
+import org.btuk.network.lib.dto.UserRemove;
+import org.btuk.network.lib.dto.UserUpdate;
+import org.btuk.network.lib.enums.ChatChannels;
+import org.btuk.network.lib.enums.ModerationAction;
+import org.btuk.network.lib.enums.TeleportRequestType;
+import org.btuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.chat.ChatManager;
+import org.btuk.proxy.core.chat.automod.AutoMod;
+import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.exceptions.ErrorMessage;
 import org.btuk.proxy.core.exceptions.ServerNotFoundException;
 import org.btuk.proxy.core.player.PlayerManager;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.server.CoreServerManager;
+import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.utils.Analytics;
 import org.btuk.proxy.core.utils.SwitchServer;
 import org.btuk.proxy.core.utils.Time;
+import org.btuk.proxy.database.sql.GlobalSQL;
+import org.btuk.proxy.database.sql.PlotSQL;
+import org.btuk.proxy.database.sql.RegionSQL;
 
-import static net.bteuk.network.lib.enums.ChatChannels.GLOBAL;
-import static org.btuk.proxy.core.utils.Constants.*;
+import java.awt.Color;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
+import static org.btuk.proxy.core.utils.Constants.JOIN_MESSAGE;
+import static org.btuk.proxy.core.utils.Constants.LEAVE_MESSAGE;
+import static org.btuk.proxy.core.utils.Constants.RECONNECT_MESSAGE;
+import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
+import static org.btuk.proxy.core.utils.Constants.WELCOME_MESSAGE;
 
 /**
  * Class to manage the users on the network.
@@ -113,9 +131,9 @@ public class UserManager {
             return;
         }
 
-        if (user.isBlockNextDisconnect()) {
-            log.warning("User has already reconnected, cancelling disconnect.");
-            user.setBlockNextDisconnect(false);
+        // If the player is not on the server they disconnected from, it implies they switched server.
+        if (!user.getServer().equals(disconnect.getServer())) {
+            log.warning("User disconnect received but they are on a different server, cancelling disconnect.");
             return;
         }
 
@@ -271,11 +289,8 @@ public class UserManager {
                 switchServer.cancelTimeout();
                 user.setSwitchServer(null);
 
+                user.cancelDisconnectTask();
             } else {
-                // If the user is still online, quickly cancel the disconnect event.
-                if (user.isOnline()) {
-                    user.setBlockNextDisconnect(true);
-                }
                 // Cancel disconnect task.
                 user.reconnect();
 
@@ -298,6 +313,9 @@ public class UserManager {
             } else {
                 // Send the connect message.
                 joinMessage = JOIN_MESSAGE;
+
+                // Update the player skin in the database.
+                user.updatePlayerSkin();
             }
         }
 
@@ -330,6 +348,9 @@ public class UserManager {
 
         // Send the tab list to the user.
         tabManager.sendTablist(user);
+
+        // Send an add team event to ensure tab sorting works.
+        tabManager.sendAddTeam(request.getTabPlayer());
 
         return user;
     }
@@ -593,7 +614,7 @@ public class UserManager {
         // Construct a chat message to send to the servers.
         Component component = Component.text(message.replace("%player%", name), NamedTextColor.YELLOW);
         ChatMessage chatMessage = new ChatMessage(GLOBAL.getChannelName(), SERVER_SENDER, component);
-        chatManager.handle(chatMessage);
+        chatManager.handle(chatMessage, false);
     }
 
     private void saveUserInfoFromDisconnect(User user, UserDisconnect disconnect) {

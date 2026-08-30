@@ -1,19 +1,18 @@
 package org.btuk.proxy.core.discord.command;
 
-import net.bteuk.network.lib.dto.OnlineUser;
-import net.bteuk.network.lib.dto.TabPlayer;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.btuk.network.lib.dto.OnlineUser;
+import org.btuk.network.lib.dto.TabPlayer;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.User;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.Set;
-
-import org.btuk.proxy.core.tab.TabManager;
-import org.btuk.proxy.core.user.CoreUserManager;
-import org.btuk.proxy.core.user.User;
 
 public class Playerlist extends AbstractCommand {
 

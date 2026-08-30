@@ -5,30 +5,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.dto.TeleportEvent;
-import net.bteuk.network.lib.dto.UserConnectReply;
-import net.bteuk.network.lib.dto.UserConnectRequest;
-import net.bteuk.network.lib.enums.ChatChannels;
-import net.bteuk.network.lib.enums.TeleportRequestType;
-import net.bteuk.network.lib.utils.ChatUtils;
-
-import org.btuk.proxy.core.exceptions.ServerNotFoundException;
-import org.btuk.proxy.core.utils.TeleportRequest;
-
-import org.btuk.proxy.core.chat.automod.AutoMod;
-import org.btuk.proxy.core.chat.automod.AutoModFlag;
-import org.btuk.proxy.core.chat.automod.AutoModFlagRule;
-import org.btuk.proxy.core.chat.automod.AutoModMatch;
-import org.btuk.proxy.core.chat.automod.AutoModRule;
-import org.btuk.proxy.database.dto.AutoModFlagDTO;
-import org.btuk.proxy.database.sql.GlobalSQL;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.dto.TeleportEvent;
+import org.btuk.network.lib.dto.UserConnectReply;
+import org.btuk.network.lib.dto.UserConnectRequest;
+import org.btuk.network.lib.enums.ChatChannels;
+import org.btuk.network.lib.enums.TeleportRequestType;
+import org.btuk.network.lib.utils.ChatUtils;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.chat.automod.AutoMod;
+import org.btuk.proxy.core.chat.automod.AutoModFlag;
+import org.btuk.proxy.core.chat.automod.AutoModFlagRule;
+import org.btuk.proxy.core.chat.automod.AutoModMatch;
+import org.btuk.proxy.core.chat.automod.AutoModRule;
+import org.btuk.proxy.core.exceptions.ServerNotFoundException;
+import org.btuk.proxy.core.player.Player;
+import org.btuk.proxy.core.scheduler.ScheduledTask;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.scheduler.TaskStatus;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.utils.Analytics;
+import org.btuk.proxy.core.utils.SwitchServer;
+import org.btuk.proxy.core.utils.TeleportRequest;
+import org.btuk.proxy.core.utils.Time;
+import org.btuk.proxy.database.dto.AutoModFlagDTO;
+import org.btuk.proxy.database.sql.GlobalSQL;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -46,16 +53,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.player.Player;
-import org.btuk.proxy.core.scheduler.ScheduledTask;
-import org.btuk.proxy.core.scheduler.Scheduler;
-import org.btuk.proxy.core.scheduler.TaskStatus;
-import org.btuk.proxy.core.tab.TabManager;
-import org.btuk.proxy.core.utils.Analytics;
-import org.btuk.proxy.core.utils.SwitchServer;
-import org.btuk.proxy.core.utils.Time;
 
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
 
@@ -134,10 +131,6 @@ public class User {
 
     @Getter
     private boolean focusEnabled;
-
-    @Getter
-    @Setter
-    private boolean blockNextDisconnect = false;
 
     @Getter
     @Setter
@@ -229,6 +222,8 @@ public class User {
 
         analytics.save(this, Time.getDate(time), time);
         online = false;
+        // Ensure no existing disconnect exists.
+        cancelDisconnectTask();
         // Run a delayed task to remove the user.
         disconnectTask = scheduler.createDelayedTask(runnable, 5L, TimeUnit.MINUTES);
     }
@@ -243,6 +238,10 @@ public class User {
         online = true;
         // Can't be afk on reconnect.
         afk = false;
+        cancelDisconnectTask();
+    }
+
+    public void cancelDisconnectTask() {
         if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
             disconnectTask.cancel();
         }
@@ -253,10 +252,7 @@ public class User {
      * Delete the user instance.
      */
     public void delete() {
-        // If the disconnectTask is running cancel.
-        if (disconnectTask != null && disconnectTask.getStatus() == TaskStatus.SCHEDULED) {
-            disconnectTask.cancel();
-        }
+        cancelDisconnectTask();
     }
 
     public void mute(User user) {
@@ -295,7 +291,12 @@ public class User {
     public UserConnectReply createUserConnectReply() {
 
         // Create database object if not exists.
-        if (newUser && globalSQL.createUser(uuid, name, playerSkin)) {
+        if (newUser) {
+            if (!globalSQL.createUser(uuid, name, playerSkin)) {
+                // We don't want to send a reply to the server since this could cause issues.
+                // The user won't be able to do anything, so this is not a perfect solution.
+                throw new RuntimeException("Failed to create user " + uuid + " in database.");
+            }
             newUser = false;
         }
 
@@ -548,6 +549,12 @@ public class User {
             ));
         }
         globalSQL.saveAutoModFlags(uuid, flags);
+    }
+
+    public void updatePlayerSkin() {
+        if (playerSkin != null) {
+            globalSQL.update("UPDATE player_data SET player_skin='" + playerSkin + "' WHERE uuid='" + uuid + "';");
+        }
     }
 
     private static JsonNode getJsonNodeFromUrl(URL url) throws IOException {
