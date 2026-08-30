@@ -72,7 +72,7 @@ public class DiscordChatListener extends ListenerAdapter {
             }
 
             ChatMessage chatMessage = new ChatMessage(channel.getChannelName(), DISCORD_SENDER, discordMessage);
-            chatManager.handle(chatMessage);
+            chatManager.handle(chatMessage, false);
         }
     }
 }

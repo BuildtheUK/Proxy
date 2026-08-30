@@ -614,7 +614,7 @@ public class UserManager {
         // Construct a chat message to send to the servers.
         Component component = Component.text(message.replace("%player%", name), NamedTextColor.YELLOW);
         ChatMessage chatMessage = new ChatMessage(GLOBAL.getChannelName(), SERVER_SENDER, component);
-        chatManager.handle(chatMessage);
+        chatManager.handle(chatMessage, false);
     }
 
     private void saveUserInfoFromDisconnect(User user, UserDisconnect disconnect) {

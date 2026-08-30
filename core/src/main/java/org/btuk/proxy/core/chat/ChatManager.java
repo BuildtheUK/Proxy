@@ -61,8 +61,9 @@ public class ChatManager {
      * A chat message must be split into direct messages for each player who must receive it.
      *
      * @param chatMessage the chat message
+     * @param sendToDiscord whether to send the message to discord
      */
-    public void handle(ChatMessage chatMessage) {
+    public void handle(ChatMessage chatMessage, boolean sendToDiscord) {
         boolean player = !SERVER_USERS.contains(chatMessage.getSender());
         if (player && autoMod.moderate(chatMessage.getSender(), chatMessage.getComponent())) {
             return;
@@ -73,7 +74,7 @@ public class ChatManager {
             analytics.addMessage(chatMessage.getSender(), Time.getDate(Time.currentTime()));
         }
         // Send the message to discord.
-        if (player) {
+        if (sendToDiscord) {
             discord.handle(chatMessage);
         }
     }

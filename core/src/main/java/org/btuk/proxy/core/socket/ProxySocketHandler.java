@@ -47,7 +47,7 @@ public class ProxySocketHandler implements SocketHandler {
         // Handle the different objects.
         switch (abstractTransferObject) {
             case ChatMessage chatMessage -> {
-                chatManager.handle(chatMessage);
+                chatManager.handle(chatMessage, true);
             }
             case DirectMessage directMessage -> chatManager.handle(directMessage);
             case PrivateMessage privateMessage -> chatManager.handle(privateMessage);
