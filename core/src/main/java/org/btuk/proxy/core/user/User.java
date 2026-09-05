@@ -6,11 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import org.btuk.network.lib.dto.DirectMessage;
 import org.btuk.network.lib.dto.TeleportEvent;
 import org.btuk.network.lib.dto.UserConnectReply;
@@ -36,12 +39,7 @@ import org.btuk.proxy.core.utils.TeleportRequest;
 import org.btuk.proxy.core.utils.Time;
 import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.sql.GlobalSQL;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
@@ -411,7 +409,18 @@ public class User {
             requesterFeedback = ChatUtils.error("You are currently muted, unable to send request.");
         } else {
             teleportRequests.add(new TeleportRequest(scheduler, this, requester));
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER, ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
+            String teleportAcceptCommand = "/tpaccept " + requester.getName();
+            String teleportDenyCommand = "/tpdeny " + requester.getName();
+            Component teleportAccept = Component.text(teleportAcceptCommand, NamedTextColor.DARK_AQUA)
+                .clickEvent(ClickEvent.runCommand(teleportAcceptCommand))
+                .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to accept the teleport request")));
+            Component teleportDeny = Component.text(teleportDenyCommand, NamedTextColor.DARK_AQUA)
+                .clickEvent(ClickEvent.runCommand(teleportDenyCommand))
+                .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to deny the teleport request")));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER,
+                ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.",
+                    Component.text(requester.getName(), NamedTextColor.DARK_AQUA), teleportAccept, teleportDeny), false)
+            );
             requesterFeedback = ChatUtils.success("Requested to teleport to %s.", displayName);
         }
 
@@ -444,7 +453,7 @@ public class User {
         Component targetFeedback = pair.getRight();
 
         if (teleportRequest != null) {
-            teleportRequest.acceptRequest();
+            teleportRequest.denyRequest();
             TeleportEvent event = new TeleportEvent(teleportRequest.getRequester().getUuid(), uuid, TeleportRequestType.ACCEPT);
             try {
                 chatHandler.handle(event, this.server);
@@ -502,6 +511,7 @@ public class User {
         teleportRequests.forEach(TeleportRequest::cancel);
         teleportRequests.clear();
     }
+
     public void addAutoModFlag(AutoModFlag flag) {
         autoModFlags.add(flag);
     }
@@ -595,11 +605,11 @@ public class User {
         List<AutoModFlagDTO> flags = new ArrayList<>();
         for (AutoModFlag flag : autoModFlags) {
             flags.add(new AutoModFlagDTO(
-                    flag.getRule().getId(),
-                    flag.getTimestamp(),
-                    flag.getMessage(),
-                    flag.getMatch().messageWord(),
-                    flag.getMatch().flaggedWord()
+                flag.getRule().getId(),
+                flag.getTimestamp(),
+                flag.getMessage(),
+                flag.getMatch().messageWord(),
+                flag.getMatch().flaggedWord()
             ));
         }
         globalSQL.saveAutoModFlags(uuid, flags);
