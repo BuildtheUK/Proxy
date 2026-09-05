@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.btuk</groupId>
         <artifactId>Proxy</artifactId>
-        <version>1.12.0-SNAPSHOT</version>
+        <version>1.13.0-SNAPSHOT</version>
     </parent>
 
     <groupId>org.btuk.proxy</groupId>
@@ -13,7 +13,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.BTEUK</groupId>
+            <groupId>com.github.BuildtheUK</groupId>
             <artifactId>NetworkLib</artifactId>
         </dependency>
 
@@ -36,23 +36,4 @@
             <version>2.0.0-1.21.4</version>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-                <configuration>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

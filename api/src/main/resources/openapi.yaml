@@ -1,0 +1,370 @@
+openapi: 3.0.3
+info:
+  title: Proxy API
+  description: Lightweight API for Proxy internal communication.
+  version: 1.0.0
+servers:
+  - url: http://172.18.0.1:51101/api
+paths:
+  /status:
+    get:
+      tags:
+        - Status
+      summary: Get API status
+      operationId: getStatus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /player/uuid/{name}:
+    get:
+      tags:
+        - Player
+      summary: Get player uuid by name
+      operationId: getPlayerUuid
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+        '404':
+          description: Player not found
+  /player/username/{uuid}:
+    get:
+      tags:
+        - Player
+      summary: Get player username by uuid
+      operationId: getPlayerUsername
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: Player not found
+  /player/message/{uuid}:
+    post:
+      tags:
+        - Player
+      summary: Send a message to the player on the server
+      operationId: sendPlayerMessage
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The message to send and the player to send to
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        "201":
+          description: Message Added
+  /player/online:
+    get:
+      tags:
+        - Player
+      summary: Get online players
+      operationId: getOnlinePlayers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Player'
+  /buildings/area:
+    get:
+      tags:
+        - Buildings
+      summary: Get buildings within an area with privacy filtering
+      description: Returns full building objects within a bounding box. Excludes private buildings unless they belong to the specified `playerUuid`.
+      operationId: getBuildingsByArea
+      parameters:
+        - name: minLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: minLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: playerUuid
+          in: query
+          required: false
+          description: Context player UUID. If provided, includes private buildings owned by this player.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Building'
+
+  /buildings/count:
+    get:
+      tags:
+        - Buildings
+      summary: Get building counts with filters
+      description: Returns the total count of buildings matching optional area, player, visibility, and source filters.
+      operationId: getBuildingCount
+      parameters:
+        - name: playerUuid
+          in: query
+          required: false
+          description: Filter by one or multiple player UUIDs. Repeat parameter for multiple (`?playerUuid=...&playerUuid=...`).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+        - name: minLat
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: minLon
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: maxLon
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: isPublic
+          in: query
+          required: false
+          description: Filter specifically for public or private buildings.
+          schema:
+            type: boolean
+        - name: playerBuilt
+          in: query
+          required: false
+          description: Filter by player-built status.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildingCount'
+
+  /buildings/grid-count:
+    get:
+      tags:
+        - Buildings
+      summary: Get aggregated building counts mapped over a grid
+      description: Divides a bounding box into a grid of cells and returns building counts per cell. Automatically filters out private buildings unless owned by the requesting player.
+      operationId: getBuildingGridCount
+      parameters:
+        - name: minLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: minLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: maxLon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: stepLat
+          in: query
+          required: true
+          description: Number of grid divisions along latitude.
+          schema:
+            type: number
+            format: double
+        - name: stepLon
+          in: query
+          required: true
+          description: Number of grid divisions along longitude.
+          schema:
+            type: number
+            format: double
+        - name: playerUuid
+          in: query
+          required: false
+          description: Context player UUID to include their own private buildings in the cell counts.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildingGridResponse'
+
+components:
+  schemas:
+    Status:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+    Player:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+    Building:
+      type: object
+      properties:
+        buildingId:
+          type: integer
+        playerName:
+          type: string
+        playerId:
+          type: string
+          format: uuid
+        isPublic:
+          type: boolean
+        playerBuilt:
+          type: boolean
+        timeAdded:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+    BuildingCount:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 42
+
+    GridCell:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        maxLat:
+          type: number
+          format: double
+        maxLon:
+          type: number
+          format: double
+        minLat:
+          type: number
+          format: double
+        minLon:
+          type: number
+          format: double
+        row:
+          type: integer
+        col:
+          type: integer
+        count:
+          type: integer
+          example: 12
+
+    BuildingGridResponse:
+      type: object
+      properties:
+        rows:
+          type: integer
+          example: 10
+        cols:
+          type: integer
+          example: 10
+        totalCount:
+          type: integer
+          example: 142
+        cells:
+          type: array
+          items:
+            $ref: '#/components/schemas/GridCell'
