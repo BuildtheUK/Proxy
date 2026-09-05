@@ -12,6 +12,7 @@ import org.btuk.proxy.core.config.Config;
 import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.discord.ReviewStatus;
 import org.btuk.proxy.core.player.PlayerManager;
+import org.btuk.proxy.core.regions.RegionManager;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.server.CoreServerManager;
 import org.btuk.proxy.core.server.ServerManager;
@@ -130,7 +131,9 @@ public class ProxyController {
         this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager);
         serverManager.initOnlineServers();
 
-        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager));
+        RegionManager regionManager = new RegionManager(chatHandler, globalSQL, regionSQL, plotSQL);
+
+        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, regionManager));
 
         // Broadcast proxy startup to all configured servers.
         chatHandler.handle(new ProxyStart(System.currentTimeMillis()));
