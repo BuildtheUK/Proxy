@@ -465,7 +465,7 @@ public class GlobalSQL extends AbstractSQL {
         } catch (SQLException e) {
             log.severe("Failed to fetch total base stats: " + e.getMessage());
         }
-        return new TotalBaseStats(0, 0,0);
+        return new TotalBaseStats(0, 0, 0);
     }
 
     /**
@@ -481,7 +481,7 @@ public class GlobalSQL extends AbstractSQL {
             SELECT 
                 (SELECT COUNT(*) FROM buildings WHERE player_id = ?) AS buildings,
                 (SELECT COALESCE(SUM(tpll), 0) FROM statistics WHERE uuid = ?) AS tplls,
-                (SELECT COALESCE(SUM(playtime), 0) FROM statistics WHERE uuid = ?) AS time_played,
+                (SELECT COALESCE(SUM(playtime) / 1000, 0) FROM statistics WHERE uuid = ?) AS time_played,
                 (SELECT COALESCE(SUM(messages), 0) FROM statistics WHERE uuid = ?) AS messages_sent;
             """;
 
