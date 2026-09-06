@@ -3,10 +3,12 @@ package org.btuk.proxy.api.server;
 import lombok.extern.java.Log;
 import org.btuk.proxy.api.impl.BuildingsApiImpl;
 import org.btuk.proxy.api.impl.PlayerApiImpl;
+import org.btuk.proxy.api.impl.StatsApiImpl;
 import org.btuk.proxy.api.impl.StatusApiImpl;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.database.sql.GlobalSQL;
 
+import org.btuk.proxy.database.sql.PlotSQL;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
@@ -22,13 +24,15 @@ public class ProxyApi {
     private final int port;
     private final GlobalSQL globalSQL;
     private final ChatManager chatManager;
+    private final PlotSQL plotSQL;
 
 
-    public ProxyApi(boolean enabled, int port, GlobalSQL globalSQL, ChatManager chatManager) {
+    public ProxyApi(boolean enabled, int port, GlobalSQL globalSQL, ChatManager chatManager, PlotSQL plotSQL) {
         this.enabled = enabled;
         this.port = port;
         this.globalSQL = globalSQL;
         this.chatManager = chatManager;
+        this.plotSQL = plotSQL;
     }
 
     public void start() {
@@ -56,13 +60,14 @@ public class ProxyApi {
             protected void configure() {
                 bind(globalSQL).to(GlobalSQL.class);
                 bind(chatManager).to(ChatManager.class);
+                bind(plotSQL).to(PlotSQL.class);
             }
         });
 
-        // 3. Register the implementation CLASSES (or scan the package)
         rc.register(StatusApiImpl.class);
         rc.register(PlayerApiImpl.class);
         rc.register(BuildingsApiImpl.class);
+        rc.register(StatsApiImpl.class);
 
 //        ResourceConfig rc = new ResourceConfig()
 //                .property("jersey.config.server.wadl.disableWadl", true)

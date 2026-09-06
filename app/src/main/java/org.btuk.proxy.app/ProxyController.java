@@ -127,7 +127,7 @@ public class ProxyController {
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager);
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager, plotSQL);
         serverManager.initOnlineServers();
 
         socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager));
