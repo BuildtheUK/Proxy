@@ -1,29 +1,12 @@
 package org.btuk.proxy.core.socket;
 
 import lombok.extern.java.Log;
-import org.btuk.network.lib.dto.AbstractTransferObject;
-import org.btuk.network.lib.dto.ChatMessage;
-import org.btuk.network.lib.dto.DirectMessage;
-import org.btuk.network.lib.dto.DiscordDirectMessage;
-import org.btuk.network.lib.dto.DiscordEmbed;
-import org.btuk.network.lib.dto.DiscordLinking;
-import org.btuk.network.lib.dto.DiscordRole;
-import org.btuk.network.lib.dto.FocusEvent;
-import org.btuk.network.lib.dto.ModerationEvent;
-import org.btuk.network.lib.dto.MuteEvent;
-import org.btuk.network.lib.dto.PlotMessage;
-import org.btuk.network.lib.dto.PrivateMessage;
-import org.btuk.network.lib.dto.ReplyMessage;
-import org.btuk.network.lib.dto.ServerShutdown;
-import org.btuk.network.lib.dto.ServerStartup;
-import org.btuk.network.lib.dto.SwitchServerEvent;
-import org.btuk.network.lib.dto.TeleportEvent;
-import org.btuk.network.lib.dto.UserConnectRequest;
-import org.btuk.network.lib.dto.UserDisconnect;
-import org.btuk.network.lib.dto.UserUpdate;
+
+import org.btuk.network.lib.dto.*;
 import org.btuk.network.lib.socket.SocketHandler;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.discord.Discord;
+import org.btuk.proxy.core.regions.RegionManager;
 import org.btuk.proxy.core.server.ServerManager;
 import org.btuk.proxy.core.user.UserManager;
 
@@ -34,12 +17,14 @@ public class ProxySocketHandler implements SocketHandler {
     private final Discord discord;
     private final UserManager userManager;
     private final ServerManager serverManager;
+    private final RegionManager regionManager;
 
-    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager) {
+    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager, RegionManager regionManager) {
         this.chatManager = chatManager;
         this.discord = discord;
         this.userManager = userManager;
         this.serverManager = serverManager;
+        this.regionManager = regionManager;
     }
 
     @Override
@@ -68,6 +53,7 @@ public class ProxySocketHandler implements SocketHandler {
             case ServerShutdown serverClose -> serverManager.removeServer(serverClose);
             case PlotMessage plotMessage -> userManager.sendPlotMessageToAll(plotMessage);
             case TeleportEvent teleportEvent -> userManager.handleTeleportEvent(teleportEvent);
+            case RegionRequestEvent regionRequestEvent -> regionManager.handleRegionRequestEvent(regionRequestEvent);
             default ->
                 log.warning("Socket object has an unrecognised type: " + abstractTransferObject.getClass().getTypeName());
         }

@@ -272,6 +272,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/BuildingGridResponse'
 
+  /stats/total:
+    get:
+      tags:
+        - Stats
+      summary: Get overall base statistics
+      operationId: getTotalStats
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotalBaseStats'
+
+  /stats/player:
+    get:
+      tags:
+        - Stats
+      summary: Get individual player base statistics
+      operationId: getPlayerStats
+      parameters:
+        - name: uuid
+          in: query
+          required: false
+          description: The UUID of the player.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerBaseStats'
 components:
   schemas:
     Status:
@@ -368,3 +403,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GridCell'
+    TotalBaseStats:
+      type: object
+      properties:
+        buildings:
+          type: integer
+        recentBuildings:
+          type: integer
+        previousRecentBuildings:
+          type: integer
+
+    PlayerBaseStats:
+      type: object
+      properties:
+        buildings:
+          type: integer
+        tplls:
+          type: integer
+        timePlayed:
+          type: integer
+        messagesSent:
+          type: integer
+        reviewsCompleted:
+          type: integer
