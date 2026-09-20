@@ -1,6 +1,7 @@
 package org.btuk.proxy.database.sql;
 
 import lombok.extern.java.Log;
+
 import org.btuk.network.lib.enums.PlotDifficulties;
 import org.btuk.network.lib.utils.Reviewing;
 import org.btuk.proxy.database.sql.migration.AcceptData;
@@ -188,7 +189,7 @@ public class PlotSQL extends AbstractSQL {
         }
     }
 
-    public int getPlayerTotalReviews(String uuid){
+    public int getPlayerTotalReviews(String uuid) {
         if (uuid == null) {
             log.warning("getPlayerTotalReviews called with null uuid");
             return 0;
@@ -209,7 +210,8 @@ public class PlotSQL extends AbstractSQL {
         }
         return 0;
     }
-}
+
     public String getRegionServer(String regionName) {
         return getString("SELECT server FROM regions WHERE region='" + regionName + "';");
-    }}
+    }
+}

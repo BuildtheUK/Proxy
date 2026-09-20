@@ -421,7 +421,7 @@ public class User {
                 ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.",
                     Component.text(requester.getName(), NamedTextColor.DARK_AQUA), teleportAccept, teleportDeny), false)
             );
-            requesterFeedback = ChatUtils.success("Requested to teleport to %s.", displayName);
+            requesterFeedback = ChatUtils.success("Requested to teleport to %s.", name);
         }
 
         chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), requester.getUuid(), SERVER_SENDER, requesterFeedback, false));
@@ -454,14 +454,8 @@ public class User {
 
         if (teleportRequest != null) {
             teleportRequest.denyRequest();
-            TeleportEvent event = new TeleportEvent(teleportRequest.getRequester().getUuid(), uuid, TeleportRequestType.ACCEPT);
-            try {
-                chatHandler.handle(event, this.server);
-                targetFeedback = ChatUtils.success("Denied teleport request from %s.", teleportRequest.getRequester().getName());
-            } catch (ServerNotFoundException e) {
-                log.severe("Server: " + this.server + " not found for teleport event, even though it's set for this user: " + this.name);
-                targetFeedback = ChatUtils.error("An error occurred, please contact a server administrator.");
-            }
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportRequest.getRequester().getUuid(), SERVER_SENDER, ChatUtils.error("%s has denied your teleport request.", name), false));
+            targetFeedback = ChatUtils.success("Denied teleport request from %s.", teleportRequest.getRequester().getName());
         }
 
         chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, targetFeedback, false));
