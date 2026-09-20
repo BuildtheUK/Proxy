@@ -6,11 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import org.btuk.network.lib.dto.DirectMessage;
 import org.btuk.network.lib.dto.TeleportEvent;
 import org.btuk.network.lib.dto.UserConnectReply;
@@ -36,6 +39,8 @@ import org.btuk.proxy.core.utils.TeleportRequest;
 import org.btuk.proxy.core.utils.Time;
 import org.btuk.proxy.database.dto.AutoModFlagDTO;
 import org.btuk.proxy.database.sql.GlobalSQL;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -152,7 +157,7 @@ public class User {
     @Getter
     private final List<AutoModFlag> autoModFlags = new ArrayList<>();
 
-    private List<TeleportRequest> teleportRequests = new ArrayList<>();
+    private final List<TeleportRequest> teleportRequests = new ArrayList<>();
 
     private final ChatHandler chatHandler;
     private final TabManager tabManager;
@@ -379,55 +384,104 @@ public class User {
         }
     }
 
-    public Component teleportRequest(User target) {
-        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
+    public void teleportRequest(User requester) {
+        if (requester == null || !requester.isOnline()) {
+            log.severe("No online user found for teleport requester, they must have disconnected");
+            return;
+        }
+
+        Component requesterFeedback;
+
+        // Check if this player didn't already send you a request.
+        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getRequester().equals(requester)).findFirst();
         if (optionalRequest.isPresent()) {
             TeleportRequest teleportRequest = optionalRequest.get();
             if (teleportRequest.isDenied()) {
-                return ChatUtils.error("%s has denied your previous teleport request, please wait before requesting again.", target.getName());
+                requesterFeedback = ChatUtils.error("%s has denied your previous teleport request, please wait before requesting again.", name);
             } else {
-                return ChatUtils.error("You have already requested to teleport to %s", target.getName());
+                requesterFeedback = ChatUtils.error("You have already requested to teleport to %s", name);
             }
-        } else if (target.isMuted(this)) {
-            return ChatUtils.error("%s currently has you muted, unable to send request.", target.getName());
-        } else if (target.isFocusEnabled()) {
-            return ChatUtils.error("%s is currently in focus mode, unable to send request.", target.getName());
-        } else if (isMuted()) {
-            return ChatUtils.error("You are currently muted, unable to send request.");
+        } else if (isMuted(this)) {
+            requesterFeedback = ChatUtils.error("%s currently has you muted, unable to send request.", name);
+        } else if (isFocusEnabled()) {
+            requesterFeedback = ChatUtils.error("%s is currently in focus mode, unable to send request.", name);
+        } else if (requester.isMuted()) {
+            requesterFeedback = ChatUtils.error("You are currently muted, unable to send request.");
+        } else {
+            teleportRequests.add(new TeleportRequest(scheduler, this, requester));
+            String teleportAcceptCommand = "/tpaccept " + requester.getName();
+            String teleportDenyCommand = "/tpdeny " + requester.getName();
+            Component teleportAccept = Component.text(teleportAcceptCommand, NamedTextColor.DARK_AQUA)
+                .clickEvent(ClickEvent.runCommand(teleportAcceptCommand))
+                .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to accept the teleport request")));
+            Component teleportDeny = Component.text(teleportDenyCommand, NamedTextColor.DARK_AQUA)
+                .clickEvent(ClickEvent.runCommand(teleportDenyCommand))
+                .hoverEvent(HoverEvent.showText(ChatUtils.greyText("Click to deny the teleport request")));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), uuid, SERVER_SENDER,
+                ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.",
+                    Component.text(requester.getName(), NamedTextColor.DARK_AQUA), teleportAccept, teleportDeny), false)
+            );
+            requesterFeedback = ChatUtils.success("Requested to teleport to %s.", name);
         }
-        teleportRequests.add(new TeleportRequest(scheduler, this, target));
-        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), target.getUuid(), SERVER_SENDER, ChatUtils.success("%s has requested to teleport to you, type %s to accept or %s to deny.", name, "/tpaccept " + name, "/tpdeny " + name), false));
-        return ChatUtils.success("Requested to teleport to %s.", target.getDisplayName());
+
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), requester.getUuid(), SERVER_SENDER, requesterFeedback, false));
     }
 
-    public Component acceptTeleportRequest(User target) {
-        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
-        if (optionalRequest.isPresent()) {
-            TeleportRequest teleportRequest = optionalRequest.get();
+    public void acceptTeleportRequest(User requester, boolean acceptLatest) {
+        Pair<TeleportRequest, Component> pair = getTeleportRequest(requester, acceptLatest);
+        TeleportRequest teleportRequest = pair.getLeft();
+        Component targetFeedback = pair.getRight();
+
+        if (teleportRequest != null) {
             teleportRequest.acceptRequest();
-            TeleportEvent event = new TeleportEvent(this.uuid, target.getUuid(), TeleportRequestType.ACCEPT);
+            TeleportEvent event = new TeleportEvent(teleportRequest.getRequester().getUuid(), uuid, TeleportRequestType.ACCEPT);
             try {
                 chatHandler.handle(event, this.server);
+                targetFeedback = ChatUtils.success("Accepted teleport request from %s.", teleportRequest.getRequester().getName());
             } catch (ServerNotFoundException e) {
                 log.severe("Server: " + this.server + " not found for teleport event, even though it's set for this user: " + this.name);
-                return ChatUtils.error("An error occurred, please contact a server administrator.");
+                targetFeedback = ChatUtils.error("An error occurred, please contact a server administrator.");
             }
-            return ChatUtils.success("Accepted teleport request from %s.", name);
-        } else {
-            return ChatUtils.error("There is no active teleport request from %s.", name);
         }
+
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, targetFeedback, false));
     }
 
-    public Component denyTeleportRequest(User target) {
-        Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getTarget().equals(target)).findFirst();
-        if (optionalRequest.isPresent()) {
-            TeleportRequest teleportRequest = optionalRequest.get();
+    public void denyTeleportRequest(User requester, boolean denyLatest) {
+        Pair<TeleportRequest, Component> pair = getTeleportRequest(requester, denyLatest);
+        TeleportRequest teleportRequest = pair.getLeft();
+        Component targetFeedback = pair.getRight();
+
+        if (teleportRequest != null) {
             teleportRequest.denyRequest();
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("%s has denied your teleport request.", target.getName()), false));
-            return ChatUtils.success("Denied teleport request from %s.", name);
-        } else {
-            return ChatUtils.error("There is no active teleport request from %s.", name);
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportRequest.getRequester().getUuid(), SERVER_SENDER, ChatUtils.error("%s has denied your teleport request.", name), false));
+            targetFeedback = ChatUtils.success("Denied teleport request from %s.", teleportRequest.getRequester().getName());
         }
+
+        chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, targetFeedback, false));
+    }
+
+    private Pair<TeleportRequest, Component> getTeleportRequest(User requester, boolean getLatestRequest) {
+        TeleportRequest teleportRequest = null;
+        Component targetFeedback = null;
+        if (getLatestRequest) {
+            Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> !request.isDenied()).findFirst();
+            if (optionalRequest.isPresent()) {
+                teleportRequest = optionalRequest.get();
+            } else {
+                targetFeedback = ChatUtils.error("You have no active teleport requests.");
+            }
+        } else if (requester != null && requester.isOnline()) {
+            Optional<TeleportRequest> optionalRequest = teleportRequests.stream().filter(request -> request.getRequester().equals(requester)).findFirst();
+            if (optionalRequest.isPresent()) {
+                teleportRequest = optionalRequest.get();
+            } else {
+                targetFeedback = ChatUtils.error("There is no active teleport request from %s.", requester.getName());
+            }
+        } else {
+            targetFeedback = ChatUtils.error("The player is no longer online");
+        }
+        return Pair.of(teleportRequest, targetFeedback);
     }
 
     public void removeTeleportRequest(UUID id, User target, boolean notifyRequester) {
@@ -437,10 +491,13 @@ public class User {
         }
     }
 
-    public void cancelTeleportRequestTo(User user) {
-        teleportRequests.stream().filter(request -> request.getTarget().equals(user)).findFirst().ifPresent(request -> {
-            request.cancel();
-            teleportRequests.remove(request);
+    public void cancelTeleportRequestFrom(User user) {
+        teleportRequests.removeIf(request -> {
+            if (request.getRequester().equals(user)) {
+                request.cancel();
+                return true;
+            }
+            return false;
         });
     }
 
@@ -448,6 +505,7 @@ public class User {
         teleportRequests.forEach(TeleportRequest::cancel);
         teleportRequests.clear();
     }
+
     public void addAutoModFlag(AutoModFlag flag) {
         autoModFlags.add(flag);
     }
@@ -541,11 +599,11 @@ public class User {
         List<AutoModFlagDTO> flags = new ArrayList<>();
         for (AutoModFlag flag : autoModFlags) {
             flags.add(new AutoModFlagDTO(
-                    flag.getRule().getId(),
-                    flag.getTimestamp(),
-                    flag.getMessage(),
-                    flag.getMatch().messageWord(),
-                    flag.getMatch().flaggedWord()
+                flag.getRule().getId(),
+                flag.getTimestamp(),
+                flag.getMessage(),
+                flag.getMatch().messageWord(),
+                flag.getMatch().flaggedWord()
             ));
         }
         globalSQL.saveAutoModFlags(uuid, flags);
