@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS player_data
     player_skin     TEXT    NULL DEFAULT NULL,
     tips_enabled    TINYINT(1)  NOT NULL DEFAULT 1,
     display_name    TEXT    NULL DEFAULT NULL,
-    PRIMARY KEY (uuid)
+    PRIMARY KEY (uuid),
+    INDEX idx_player_data_1 (name)
 );
 
 CREATE TABLE IF NOT EXISTS messages
@@ -51,7 +52,8 @@ CREATE TABLE IF NOT EXISTS messages
     recipient   CHAR(36)    NOT NULL,
     message     TEXT        NOT NULL,
     PRIMARY KEY(id),
-    CONSTRAINT fk_messages_1 FOREIGN KEY(recipient) REFERENCES player_data(uuid)
+    CONSTRAINT fk_messages_1 FOREIGN KEY(recipient) REFERENCES player_data(uuid),
+    INDEX idx_messages_1 (recipient)
 );
 
 CREATE TABLE IF NOT EXISTS join_events
@@ -155,7 +157,8 @@ CREATE TABLE IF NOT EXISTS moderation
     type        ENUM('ban',
     'mute')                     NOT NULL,
     PRIMARY KEY(uuid,start_time),
-    CONSTRAINT fk_moderation_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid)
+    CONSTRAINT fk_moderation_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid),
+    INDEX idx_moderation_1 (uuid, end_time, type)
 );
 
 CREATE TABLE IF NOT EXISTS coins
@@ -221,7 +224,9 @@ CREATE TABLE IF NOT EXISTS buildings
     lon             DOUBLE DEFAULT 0,
     PRIMARY KEY(building_id),
     CONSTRAINT fk_buildings_1 FOREIGN KEY(coordinate_id) REFERENCES coordinates(id),
-    CONSTRAINT fk_buildings_2 FOREIGN KEY(player_id) REFERENCES player_data(uuid)
+    CONSTRAINT fk_buildings_2 FOREIGN KEY(player_id) REFERENCES player_data(uuid),
+    INDEX idx_buildings_1 (player_id),
+    INDEX idx_buildings_2 (lat, lon)
     );
 
 CREATE TABLE IF NOT EXISTS survey

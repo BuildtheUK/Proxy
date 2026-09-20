@@ -1,29 +1,27 @@
-//package org.btuk.proxy.core.discord.command;
-//
-//import org.btuk.proxy.Proxy;
-//import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-//import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
-//
-//public class Map extends AbstractCommand {
-//
-//    /**
-//     * Constructor, saved the name and description of the command.
-//     * Also registers the command in Discord.
-//     * @param name Name of the command
-//     * @param description Description of the command
-//     */
-//    public Map(String name, String description) {
-//        super(name, description);
-//    }
-//
-//    @Override
-//    public void onCommand(SlashCommandInteractionEvent event) {
-//
-//        String playerListMessage = Proxy.getInstance().getConfig().getString("progress_map");
-//
-//        ReplyCallbackAction reply = event.reply(playerListMessage);
-//        reply = reply.setEphemeral(true);
-//        reply.queue();
-//
-//    }
-//}
+package org.btuk.proxy.core.discord.command;
+
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
+
+public class Map extends AbstractCommand {
+
+    private final String link;
+
+   /**
+    * Constructor, saved the name and description of the command.
+    * Also registers the command in Discord.
+    * @param name Name of the command
+    * @param description Description of the command
+    */
+   public Map(String name, String description, String link) {
+       super(name, description);
+       this.link = link;
+   }
+
+   @Override
+   public void onCommand(SlashCommandInteractionEvent event) {
+       ReplyCallbackAction reply = event.reply(link);
+       reply = reply.setEphemeral(true);
+       reply.queue();
+   }
+}

@@ -1,15 +1,32 @@
-package org.btuk.proxy.core;
+package org.btuk.proxy.app;
 
 import lombok.Getter;
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.OnlineUserRemove;
-
+import org.btuk.network.lib.dto.OnlineUserRemove;
+import org.btuk.network.lib.dto.ProxyStart;
+import org.btuk.proxy.api.server.ProxyApi;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.chat.automod.AutoMod;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.discord.Discord;
+import org.btuk.proxy.core.discord.ReviewStatus;
+import org.btuk.proxy.core.player.PlayerManager;
+import org.btuk.proxy.core.regions.RegionManager;
+import org.btuk.proxy.core.scheduler.Scheduler;
+import org.btuk.proxy.core.server.CoreServerManager;
+import org.btuk.proxy.core.server.ServerManager;
+import org.btuk.proxy.core.socket.ProxySocketHandler;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.UserManager;
+import org.btuk.proxy.core.utils.Analytics;
+import org.btuk.proxy.core.utils.Constants;
+import org.btuk.proxy.core.utils.Moderation;
 import org.btuk.proxy.database.DatabaseInit;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
 import org.btuk.proxy.database.sql.RegionSQL;
-
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import javax.sql.DataSource;
@@ -21,25 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.chat.ChatManager;
-import org.btuk.proxy.core.config.Config;
-import org.btuk.proxy.core.discord.Discord;
-import org.btuk.proxy.core.discord.ReviewStatus;
-import org.btuk.proxy.core.player.PlayerManager;
-import org.btuk.proxy.core.scheduler.Scheduler;
-import org.btuk.proxy.core.server.CoreServerManager;
-import org.btuk.proxy.core.server.ServerManager;
-import org.btuk.proxy.core.socket.ProxySocketHandler;
-import org.btuk.proxy.core.tab.TabManager;
-import org.btuk.proxy.core.user.CoreUserManager;
-import org.btuk.proxy.core.user.UserManager;
-import org.btuk.proxy.core.utils.Analytics;
-import org.btuk.proxy.core.utils.Constants;
-import org.btuk.proxy.core.utils.Moderation;
-
 import static java.awt.Color.RED;
-import static org.btuk.proxy.core.utils.Constants.LEAVE_MESSAGE;
 
 /**
  * Controller of the core proxy functionality; can be enabled by the proxy or external plugins that want to use the proxy functions.
@@ -74,6 +73,8 @@ public class ProxyController {
 
     private UserManager userManager;
 
+    private ProxyApi proxyApi;
+
     private static final String PROXY_CONFIG_NAME = "proxy-config.yml";
 
     private static final String AUTOMOD_CONFIG_NAME = "automod.yml";
@@ -99,8 +100,8 @@ public class ProxyController {
         this.enabled = true;
     }
 
-
-    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager, Consumer<ProxySocketHandler> socketInitializer) throws IOException {
+    public void start(ChatHandler chatHandler, Scheduler scheduler, CoreServerManager coreServerManager, PlayerManager playerManager, TabManager tabManager,
+                      Consumer<ProxySocketHandler> socketInitializer) throws IOException {
 
         if (!enabled) {
             log.severe("Proxy is not enabled, see previous logs for errors.");
@@ -116,9 +117,10 @@ public class ProxyController {
         Moderation moderation = new Moderation(globalSQL);
 
         AutoMod automod = new AutoMod(coreUserManager, new Config(dataFolder, AUTOMOD_CONFIG_NAME), moderation, discord, chatHandler, tabManager);
-        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod);
+        ChatManager chatManager = new ChatManager(chatHandler, coreUserManager, analytics, globalSQL, moderation, automod, discord);
 
-        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager, analytics, discord, automod);
+        this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager,
+                analytics, discord, automod);
 
         ServerManager serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
 
@@ -126,15 +128,25 @@ public class ProxyController {
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager, plotSQL);
         serverManager.initOnlineServers();
 
-        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, tabManager));
+        RegionManager regionManager = new RegionManager(chatHandler, globalSQL, regionSQL, plotSQL);
+
+        socketInitializer.accept(new ProxySocketHandler(chatManager, discord, userManager, serverManager, regionManager));
+
+        // Broadcast proxy startup to all configured servers.
+        chatHandler.handle(new ProxyStart(System.currentTimeMillis()));
+
+        proxyApi.start();
 
         started = true;
     }
 
     public void stop() {
+        if (proxyApi != null) {
+            proxyApi.stop();
+        }
         if (started) {
             // Show the disconnect message for all players in discord.
             if (discord != null) {
@@ -143,7 +155,7 @@ public class ProxyController {
 
                 coreUserManager.runForEachOnline(user -> {
                     if (user.isOnline()) {
-                        discord.sendConnectEmbed(LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> {
+                        discord.sendConnectEmbed(Constants.LEAVE_MESSAGE, user.getName(), user.getUuid(), user.getPlayerSkin(), RED, (reply) -> {
                             users.decrementAndGet();
                             disconnectLatch.countDown();
                         });
@@ -164,7 +176,7 @@ public class ProxyController {
 
                 // Clear JDA listeners
                 if (discord.getJda() != null) {
-                    //Unregister listeners.
+                    // Unregister listeners.
                     discord.getJda().getEventManager().getRegisteredListeners().forEach(listener -> discord.getJda().getEventManager().unregister(listener));
                 }
 

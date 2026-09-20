@@ -1,15 +1,14 @@
 package org.btuk.proxy.core.discord;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.DiscordLinking;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.apache.commons.lang3.StringUtils;
+import org.btuk.network.lib.dto.DiscordLinking;
+import org.btuk.proxy.core.chat.ChatHandler;
 
 import java.util.List;
-
-import org.btuk.proxy.core.chat.ChatHandler;
 
 @Log
 public class BotChatListener extends ListenerAdapter {

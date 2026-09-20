@@ -1,8 +1,9 @@
 package org.btuk.proxy.database.sql;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.enums.PlotDifficulties;
-import net.bteuk.network.lib.utils.Reviewing;
+
+import org.btuk.network.lib.enums.PlotDifficulties;
+import org.btuk.network.lib.utils.Reviewing;
 import org.btuk.proxy.database.sql.migration.AcceptData;
 import org.btuk.proxy.database.sql.migration.DenyData;
 import org.btuk.proxy.database.sql.migration.PlotSubmissions;
@@ -186,5 +187,31 @@ public class PlotSQL extends AbstractSQL {
             e.printStackTrace();
             return corners;
         }
+    }
+
+    public int getPlayerTotalReviews(String uuid) {
+        if (uuid == null) {
+            log.warning("getPlayerTotalReviews called with null uuid");
+            return 0;
+        }
+
+        final String sql = "SELECT COUNT(*) FROM plot_review WHERE reviewer = ?;";
+
+        try (Connection conn = conn(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, uuid);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (results.next()) {
+                    return results.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("An error occurred while fetching total reviews for " + uuid + ": " + e.getMessage());
+        }
+        return 0;
+    }
+
+    public String getRegionServer(String regionName) {
+        return getString("SELECT server FROM regions WHERE region='" + regionName + "';");
     }
 }

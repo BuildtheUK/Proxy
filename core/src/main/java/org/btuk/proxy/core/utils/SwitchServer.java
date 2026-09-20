@@ -29,6 +29,7 @@ public class SwitchServer {
 
     private final User user;
 
+    @Getter
     private final String fromServer;
 
     @Getter

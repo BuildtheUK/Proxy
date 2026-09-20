@@ -1,6 +1,7 @@
 package org.btuk.proxy.core.user;
 
-import net.bteuk.network.lib.dto.OnlineUser;
+import lombok.extern.java.Log;
+import org.btuk.network.lib.dto.OnlineUser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +13,7 @@ import java.util.function.Consumer;
 /**
  * Contains the core user management features with minimal implementation/dependencies.
  */
+@Log
 public class CoreUserManager {
 
     private final List<User> users = new ArrayList<>();
@@ -19,11 +21,15 @@ public class CoreUserManager {
     private final Set<OnlineUser> onlineUsers = new HashSet<>();
 
     public void addUser(User user) {
+        log.info("Adding user " + user.getName() + " to server " + user.getServer());
         users.add(user);
+        log.info("All users: " + users.stream().map(User::getName).toList());
     }
 
     public void removeUser(User user) {
+        log.info("Removing user " + user.getName() + " from server " + user.getServer());
         users.remove(user);
+        log.info("All users: " + users.stream().map(User::getName).toList());
     }
 
     /**
@@ -97,11 +103,15 @@ public class CoreUserManager {
     }
 
     public void addOnlineUser(OnlineUser user) {
+        log.info("Adding online user " + user.getName() + " to server " + user.getServer());
         onlineUsers.add(user);
+        log.info("All online users: " + onlineUsers.stream().map(OnlineUser::getName).toList());
     }
 
     public void removeOnlineUser(OnlineUser user) {
+        log.info("Removing online user " + user.getName() + " from server " + user.getServer());
         onlineUsers.remove(user);
+        log.info("All online users: " + onlineUsers.stream().map(OnlineUser::getName).toList());
     }
 
     public Set<OnlineUser> getOnlineUsers() {
