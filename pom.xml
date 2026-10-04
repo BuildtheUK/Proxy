@@ -44,6 +44,10 @@
 
         <snakeyaml.version>2.5</snakeyaml.version>
 
+        <stripe.version>33.4.2</stripe.version>
+
+        <luckperms.version>5.4</luckperms.version>
+
         <junit.version>6.0.0</junit.version>
     </properties>
 
@@ -64,6 +68,10 @@
             <id>smyler-releases</id>
             <name>Smyler's maven repository</name>
             <url>https://maven.smyler.net/releases</url>
+        </repository>
+        <repository>
+            <id>luckperms</id>
+            <url>https://repo.luckperms.net/</url>
         </repository>
     </repositories>
 
@@ -155,6 +163,19 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.stripe</groupId>
+                <artifactId>stripe-java</artifactId>
+                <version>${stripe.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.luckperms</groupId>
+                <artifactId>api</artifactId>
+                <version>${luckperms.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <!-- Test dependencies -->

@@ -68,6 +68,12 @@ api:
   enabled: true
   port: 61101
 
+#Stripe Configuration
+stripe:
+  webhook_secret: ""
+  api_key: ""
+  reward_role: "reward"
+
 #Database login
 host: localhost
 port: 3306

@@ -268,3 +268,63 @@ CREATE TABLE IF NOT EXISTS automod_flags
     CONSTRAINT fk_automod_flags_1 FOREIGN KEY(uuid) REFERENCES player_data(uuid),
     INDEX idx_automod_flags_1 (uuid)
 );
+
+CREATE TABLE IF NOT EXISTS stripe_events
+(
+    id              VARCHAR(255)    NOT NULL,
+    type            VARCHAR(100)    NOT NULL,
+    status          VARCHAR(32)     NOT NULL,
+    error_message   TEXT            NULL DEFAULT NULL,
+    created_at      BIGINT          NOT NULL,
+    processed_at    BIGINT          NULL DEFAULT NULL,
+    PRIMARY KEY(id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_customers
+(
+    customer_id     VARCHAR(255)    NOT NULL,
+    minecraft_uuid  CHAR(36)        NOT NULL,
+    minecraft_name  VARCHAR(64)     NULL DEFAULT NULL,
+    created_at      BIGINT          NOT NULL,
+    updated_at      BIGINT          NOT NULL,
+    PRIMARY KEY(customer_id),
+    INDEX idx_stripe_customers_1 (minecraft_uuid)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_subscriptions
+(
+    subscription_id         VARCHAR(255)    NOT NULL,
+    customer_id             VARCHAR(255)    NOT NULL,
+    minecraft_uuid          CHAR(36)        NOT NULL,
+    status                  VARCHAR(64)     NOT NULL,
+    plan_id                 VARCHAR(255)    NULL DEFAULT NULL,
+    duration_months         INT             NOT NULL DEFAULT 1,
+    current_period_start    BIGINT          NULL DEFAULT NULL,
+    current_period_end      BIGINT          NULL DEFAULT NULL,
+    created_at              BIGINT          NOT NULL,
+    updated_at              BIGINT          NOT NULL,
+    PRIMARY KEY(subscription_id),
+    INDEX idx_stripe_subscriptions_1 (customer_id),
+    INDEX idx_stripe_subscriptions_2 (minecraft_uuid)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_payments
+(
+    id                  VARCHAR(255)    NOT NULL,
+    charge_id           VARCHAR(255)    NULL DEFAULT NULL,
+    customer_id         VARCHAR(255)    NULL DEFAULT NULL,
+    subscription_id     VARCHAR(255)    NULL DEFAULT NULL,
+    minecraft_uuid      CHAR(36)        NOT NULL,
+    payment_type        VARCHAR(32)     NOT NULL,
+    amount              BIGINT          NOT NULL DEFAULT 0,
+    currency            VARCHAR(10)     NULL DEFAULT NULL,
+    duration_days       INT             NOT NULL DEFAULT 30,
+    status              VARCHAR(32)     NOT NULL DEFAULT 'PAID',
+    created_at          BIGINT          NOT NULL,
+    refunded_at         BIGINT          NULL DEFAULT NULL,
+    PRIMARY KEY(id),
+    INDEX idx_stripe_payments_1 (charge_id),
+    INDEX idx_stripe_payments_2 (customer_id),
+    INDEX idx_stripe_payments_3 (subscription_id),
+    INDEX idx_stripe_payments_4 (minecraft_uuid)
+);

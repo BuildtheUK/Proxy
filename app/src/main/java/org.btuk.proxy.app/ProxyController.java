@@ -13,9 +13,12 @@ import org.btuk.proxy.core.discord.Discord;
 import org.btuk.proxy.core.discord.ReviewStatus;
 import org.btuk.proxy.core.player.PlayerManager;
 import org.btuk.proxy.core.regions.RegionManager;
+import org.btuk.proxy.core.role.LuckPermsRoleManager;
+import org.btuk.proxy.core.role.RoleManager;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.server.CoreServerManager;
 import org.btuk.proxy.core.server.ServerManager;
+import org.btuk.proxy.core.service.MinecraftUserResolver;
 import org.btuk.proxy.core.socket.ProxySocketHandler;
 import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.user.CoreUserManager;
@@ -27,6 +30,7 @@ import org.btuk.proxy.database.DatabaseInit;
 import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.database.sql.PlotSQL;
 import org.btuk.proxy.database.sql.RegionSQL;
+import org.btuk.proxy.database.sql.StripeSQL;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import javax.sql.DataSource;
@@ -59,6 +63,12 @@ public class ProxyController {
     private GlobalSQL globalSQL;
     private RegionSQL regionSQL;
     private PlotSQL plotSQL;
+
+    @Getter
+    private StripeSQL stripeSQL;
+
+    @Getter
+    private RoleManager roleManager;
 
     @Getter
     private final CoreUserManager coreUserManager;
@@ -127,8 +137,12 @@ public class ProxyController {
         // Set up the review status message.
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
 
+        this.roleManager = new LuckPermsRoleManager();
+        MinecraftUserResolver userResolver = new MinecraftUserResolver(coreUserManager, globalSQL);
+
         this.discord.addJDAEventListeners(chatManager, coreUserManager, tabManager, plotSQL);
-        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager, plotSQL);
+        this.proxyApi = new ProxyApi(config.getBoolean("api.enabled"), config.getInt("api.port"), globalSQL, chatManager, plotSQL,
+            stripeSQL, roleManager, userResolver, config);
         serverManager.initOnlineServers();
 
         RegionManager regionManager = new RegionManager(chatHandler, globalSQL, regionSQL, plotSQL);
@@ -226,6 +240,7 @@ public class ProxyController {
             String globalDatabase = config.getString("database.global");
             DataSource globalDataSource = init.mysqlSetup(globalDatabase, host, port, username, password);
             globalSQL = new GlobalSQL(globalDataSource);
+            stripeSQL = new StripeSQL(globalDataSource);
 
             // Region Database
             String regionDatabase = config.getString("database.region");
