@@ -436,10 +436,10 @@ public class User {
             teleportRequest.acceptRequest();
             TeleportEvent event = new TeleportEvent(teleportRequest.getRequester().getUuid(), uuid, TeleportRequestType.ACCEPT);
             try {
-                chatHandler.handle(event, this.server);
+                chatHandler.handle(event, requester.getServer());
                 targetFeedback = ChatUtils.success("Accepted teleport request from %s.", teleportRequest.getRequester().getName());
             } catch (ServerNotFoundException e) {
-                log.severe("Server: " + this.server + " not found for teleport event, even though it's set for this user: " + this.name);
+                log.severe("Server: " + requester.getServer() + " not found for teleport event, even though it's set for this user: " + requester.getName());
                 targetFeedback = ChatUtils.error("An error occurred, please contact a server administrator.");
             }
         }
@@ -484,17 +484,20 @@ public class User {
         return Pair.of(teleportRequest, targetFeedback);
     }
 
-    public void removeTeleportRequest(UUID id, User target, boolean notifyRequester) {
+    public void removeTeleportRequest(UUID id, User requester, boolean notifyRequester) {
         teleportRequests.removeIf(request -> request.getId().equals(id));
         if (notifyRequester && isOnline()) {
-            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("Your teleport request to %s has timed out.", target.getName()), false));
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), requester.getUuid(), SERVER_SENDER, ChatUtils.error("Your teleport request to %s has timed out.", this.getName()), false));
         }
     }
 
-    public void cancelTeleportRequestFrom(User user) {
+    public void cancelTeleportRequestFrom(User user, boolean notifyTarget) {
         teleportRequests.removeIf(request -> {
             if (request.getRequester().equals(user)) {
                 request.cancel();
+                if (notifyTarget && isOnline()) {
+                    chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), this.uuid, SERVER_SENDER, ChatUtils.error("The teleport request from %s has been cancelled.", user.getName()), false));
+                }
                 return true;
             }
             return false;
