@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.java.Log;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.btuk.network.lib.dto.ChatMessage;
 import org.btuk.network.lib.dto.DirectMessage;
 import org.btuk.network.lib.dto.FocusEvent;
@@ -452,7 +453,8 @@ public class UserManager {
 
     public void handleTeleportEvent(TeleportEvent teleportEvent) {
         User target = coreUserManager.getUserByUuid(teleportEvent.getTarget());
-        if (target == null || !target.isOnline()) {
+
+        if ((target == null || !target.isOnline()) && teleportEvent.getType() != TeleportRequestType.CANCEL) {
             if (teleportEvent.getType() == TeleportRequestType.REQUEST) {
                 chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), teleportEvent.getRequester(), SERVER_SENDER, ChatUtils.error("The player you are trying to teleport to is not online."), false));
             } else {
@@ -463,9 +465,22 @@ public class UserManager {
 
         User requester = coreUserManager.getUserByUuid(teleportEvent.getRequester());
         switch (teleportEvent.getType()) {
-            case REQUEST -> target.teleportRequest(requester);
-            case ACCEPT -> target.acceptTeleportRequest(requester, teleportEvent.getRequester() == null);
-            case DENY -> target.denyTeleportRequest(requester, teleportEvent.getRequester() == null);
+            case REQUEST -> {
+                if (target != null) {
+                    target.teleportRequest(requester);
+                }
+            }
+            case ACCEPT -> {
+                if (target != null) {
+                    target.acceptTeleportRequest(requester, teleportEvent.getRequester() == null);
+                }
+            }
+            case DENY -> {
+                if (target != null) {
+                    target.denyTeleportRequest(requester, teleportEvent.getRequester() == null);
+                }
+            }
+            case CANCEL -> removeTeleportRequestFrom(requester, true);
         }
     }
 
@@ -620,7 +635,14 @@ public class UserManager {
     }
 
     private void removeTeleportRequests(User user) {
-        coreUserManager.runForEach(otherUser -> otherUser.cancelTeleportRequestFrom(user));
+        removeTeleportRequestFrom(user, false);
         user.cancelTeleportRequests();
+    }
+
+    private void removeTeleportRequestFrom(User user, boolean notify) {
+        coreUserManager.runForEach(otherUser -> otherUser.cancelTeleportRequestFrom(user, notify));
+        if (notify) {
+            chatHandler.handle(new DirectMessage(ChatChannels.GLOBAL.getChannelName(), user.getUuid(), SERVER_SENDER, ChatUtils.error("Your teleport requests have been cancelled."), false));
+        }
     }
 }
