@@ -408,7 +408,7 @@ public class User {
         } else if (requester.isMuted()) {
             requesterFeedback = ChatUtils.error("You are currently muted, unable to send request.");
         } else {
-            teleportRequests.add(new TeleportRequest(scheduler, this, requester));
+            teleportRequests.addFirst(new TeleportRequest(scheduler, this, requester));
             String teleportAcceptCommand = "/tpaccept " + requester.getName();
             String teleportDenyCommand = "/tpdeny " + requester.getName();
             Component teleportAccept = Component.text(teleportAcceptCommand, NamedTextColor.DARK_AQUA)
@@ -436,10 +436,10 @@ public class User {
             teleportRequest.acceptRequest();
             TeleportEvent event = new TeleportEvent(teleportRequest.getRequester().getUuid(), uuid, TeleportRequestType.ACCEPT);
             try {
-                chatHandler.handle(event, requester.getServer());
+                chatHandler.handle(event, teleportRequest.getRequester().getServer());
                 targetFeedback = ChatUtils.success("Accepted teleport request from %s.", teleportRequest.getRequester().getName());
             } catch (ServerNotFoundException e) {
-                log.severe("Server: " + requester.getServer() + " not found for teleport event, even though it's set for this user: " + requester.getName());
+                log.severe("Server: " +  teleportRequest.getRequester().getServer() + " not found for teleport event, even though it's set for this user: " + requester.getName());
                 targetFeedback = ChatUtils.error("An error occurred, please contact a server administrator.");
             }
         }
