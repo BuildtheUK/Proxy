@@ -1,13 +1,13 @@
 package org.btuk.proxy.core.socket;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.*;
-import net.bteuk.network.lib.socket.SocketHandler;
 
+import org.btuk.network.lib.dto.*;
+import org.btuk.network.lib.socket.SocketHandler;
 import org.btuk.proxy.core.chat.ChatManager;
 import org.btuk.proxy.core.discord.Discord;
+import org.btuk.proxy.core.regions.RegionManager;
 import org.btuk.proxy.core.server.ServerManager;
-import org.btuk.proxy.core.tab.TabManager;
 import org.btuk.proxy.core.user.UserManager;
 
 @Log
@@ -17,14 +17,14 @@ public class ProxySocketHandler implements SocketHandler {
     private final Discord discord;
     private final UserManager userManager;
     private final ServerManager serverManager;
-    private final TabManager tabManager;
+    private final RegionManager regionManager;
 
-    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager, TabManager tabManager) {
+    public ProxySocketHandler(ChatManager chatManager, Discord discord, UserManager userManager, ServerManager serverManager, RegionManager regionManager) {
         this.chatManager = chatManager;
         this.discord = discord;
         this.userManager = userManager;
         this.serverManager = serverManager;
-        this.tabManager = tabManager;
+        this.regionManager = regionManager;
     }
 
     @Override
@@ -32,8 +32,7 @@ public class ProxySocketHandler implements SocketHandler {
         // Handle the different objects.
         switch (abstractTransferObject) {
             case ChatMessage chatMessage -> {
-                chatManager.handle(chatMessage);
-                discord.handle(chatMessage);
+                chatManager.handle(chatMessage, true);
             }
             case DirectMessage directMessage -> chatManager.handle(directMessage);
             case PrivateMessage privateMessage -> chatManager.handle(privateMessage);
@@ -54,6 +53,7 @@ public class ProxySocketHandler implements SocketHandler {
             case ServerShutdown serverClose -> serverManager.removeServer(serverClose);
             case PlotMessage plotMessage -> userManager.sendPlotMessageToAll(plotMessage);
             case TeleportEvent teleportEvent -> userManager.handleTeleportEvent(teleportEvent);
+            case RegionRequestEvent regionRequestEvent -> regionManager.handleRegionRequestEvent(regionRequestEvent);
             default ->
                 log.warning("Socket object has an unrecognised type: " + abstractTransferObject.getClass().getTypeName());
         }

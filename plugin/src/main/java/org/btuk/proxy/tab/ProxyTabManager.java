@@ -3,25 +3,22 @@ package org.btuk.proxy.tab;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.util.GameProfile;
-import net.bteuk.network.lib.dto.TabPlayer;
-
+import net.kyori.adventure.text.Component;
+import org.btuk.network.lib.dto.TabPlayer;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.player.Player;
 import org.btuk.proxy.core.scheduler.Scheduler;
 import org.btuk.proxy.core.tab.AbstractTabManager;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.player.ProxyPlayer;
-
-import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.config.Config;
-import org.btuk.proxy.core.player.Player;
-import org.btuk.proxy.core.user.CoreUserManager;
-import org.btuk.proxy.core.user.User;
 
 /**
  * Keeps track of all users and their tab information.

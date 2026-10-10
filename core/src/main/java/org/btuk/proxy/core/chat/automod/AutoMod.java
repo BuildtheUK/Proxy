@@ -1,16 +1,10 @@
 package org.btuk.proxy.core.chat.automod;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.DirectMessage;
-import net.bteuk.network.lib.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
+import org.btuk.network.lib.dto.DirectMessage;
+import org.btuk.network.lib.utils.ChatUtils;
 import org.btuk.proxy.core.chat.ChatHandler;
 import org.btuk.proxy.core.config.Config;
 import org.btuk.proxy.core.discord.Discord;
@@ -20,7 +14,11 @@ import org.btuk.proxy.core.user.User;
 import org.btuk.proxy.core.utils.Moderation;
 import org.btuk.proxy.core.utils.Time;
 
-import static net.bteuk.network.lib.enums.ChatChannels.GLOBAL;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+
+import static org.btuk.network.lib.enums.ChatChannels.GLOBAL;
 import static org.btuk.proxy.core.utils.Constants.SERVER_SENDER;
 
 /**
@@ -93,7 +91,7 @@ public class AutoMod {
      * @return true if the message should be blocked
      */
     private boolean checkMessage(User user, String message) {
-        Map<String, CandidateWord> candidateWords = AutoModRule.getCandidateWords(message);
+        List<CandidateWord> candidateWords = AutoModRule.getCandidateWords(message);
         boolean blockMessage = false;
         for (AutoModRule rule : autoModConfig.getRules()) {
             blockMessage |= checkRule(rule, candidateWords, user, message);
@@ -123,7 +121,7 @@ public class AutoMod {
         }
     }
 
-    private boolean checkRule(AutoModRule rule, Map<String, CandidateWord> candidateWords, User user, String message) {
+    private boolean checkRule(AutoModRule rule, List<CandidateWord> candidateWords, User user, String message) {
         List<AutoModMatch> matches = rule.getMatches(candidateWords);
         if (matches.isEmpty()) {
             return false;

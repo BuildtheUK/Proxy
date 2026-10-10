@@ -26,10 +26,10 @@ public class TeleportRequest {
     private final UUID id;
 
     /**
-     * UUID of the target player.
+     * Requester.
      */
     @Getter
-    private final User target;
+    private final User requester;
 
     private final User user;
 
@@ -44,12 +44,12 @@ public class TeleportRequest {
     @Getter
     private boolean denied = false;
 
-    public TeleportRequest(Scheduler scheduler, User user, User target) {
+    public TeleportRequest(Scheduler scheduler, User user, User requester) {
         this.scheduler = scheduler;
         this.id = UUID.randomUUID();
         this.user = user;
-        this.target = target;
-        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.target, true),5, TimeUnit.MINUTES);
+        this.requester = requester;
+        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.requester, true),5, TimeUnit.MINUTES);
     }
 
     public void cancel() {
@@ -60,13 +60,13 @@ public class TeleportRequest {
 
     public void acceptRequest() {
         cancel();
-        user.removeTeleportRequest(this.id, this.target, false);
+        user.removeTeleportRequest(this.id, this.requester, false);
     }
 
     public void denyRequest() {
         this.denied = true;
         // Create a new task to remove the request from the user's list after 5 minutes.
         cancel();
-        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.target, false), 5, TimeUnit.MINUTES);
+        this.timeoutTask = scheduler.createDelayedTask(() -> user.removeTeleportRequest(this.id, this.requester, false), 5, TimeUnit.MINUTES);
     }
 }

@@ -1,20 +1,19 @@
 package org.btuk.proxy.chat;
 
 import lombok.extern.java.Log;
-import net.bteuk.network.lib.dto.AbstractTransferObject;
-import net.bteuk.network.lib.socket.OutputSocket;
+import org.btuk.network.lib.dto.AbstractTransferObject;
+import org.btuk.network.lib.socket.OutputSocket;
+import org.btuk.proxy.core.chat.ChatHandler;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.config.ConfigSocket;
 import org.btuk.proxy.core.exceptions.ServerNotFoundException;
+import org.btuk.proxy.core.server.CoreServerManager;
+import org.btuk.proxy.core.server.Server;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import org.btuk.proxy.core.chat.ChatHandler;
-import org.btuk.proxy.core.config.Config;
-import org.btuk.proxy.core.config.ConfigSocket;
-import org.btuk.proxy.core.server.Server;
-import org.btuk.proxy.core.server.CoreServerManager;
 
 @Log
 public class ProxyChatHandler implements ChatHandler {

@@ -1,8 +1,5 @@
 package org.btuk.proxy.core.discord.command;
 
-import org.btuk.proxy.database.sql.GlobalSQL;
-import org.btuk.proxy.database.sql.PlotSQL;
-
 import lombok.extern.java.Log;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
@@ -14,13 +11,15 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.btuk.proxy.core.config.Config;
+import org.btuk.proxy.core.tab.TabManager;
+import org.btuk.proxy.core.user.CoreUserManager;
+import org.btuk.proxy.database.sql.GlobalSQL;
+import org.btuk.proxy.database.sql.PlotSQL;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import org.btuk.proxy.core.tab.TabManager;
-import org.btuk.proxy.core.user.CoreUserManager;
 
 /**
  * Manages all Discord commands.
@@ -39,11 +38,14 @@ public class CommandManager extends ListenerAdapter {
 
     private final PlotSQL plotSQL;
 
-    public CommandManager(CoreUserManager userManager, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL) {
+    private final Config config;
+
+    public CommandManager(CoreUserManager userManager, TabManager tabManager, GlobalSQL globalSQL, PlotSQL plotSQL, Config config) {
         this.userManager = userManager;
         this.tabManager = tabManager;
         this.globalSQL = globalSQL;
         this.plotSQL = plotSQL;
+        this.config = config;
         commands = new ArrayList<>();
     }
 
@@ -97,7 +99,17 @@ public class CommandManager extends ListenerAdapter {
 
         //Create commands.
         commands.add(new Playerlist(userManager, tabManager, "playerlist", "List all online players on the Minecraft server."));
-        //commands.add(new Map("map", "Sends a link to the UK progress map.")); // The progress map is no longer available.
+        String progressMap = config.getString("progress_map");
+        if (progressMap != null && !progressMap.isBlank()) {
+            commands.add(new Map("map", "Sends a link to the UK progress map.", progressMap));
+            commands.add(new Map("progress", "Sends a link to the UK progress map.", progressMap));
+            commands.add(new Map("progressmap", "Sends a link to the UK progress map.", progressMap));
+        }
+
+        String websiteLink = config.getString("website");
+        if (websiteLink != null && !websiteLink.isBlank()) {
+            commands.add(new Website("website", "Sends a link of the website",  websiteLink));
+        }
 
         commands.add(new ClaimedPlots(globalSQL, plotSQL, "claimedplots", "List all plots that are currently claimed.", playerOption));
         commands.add(new SubmittedPlots(globalSQL, plotSQL, "submittedplots", "List all plots that are currently submitted.", playerOption));

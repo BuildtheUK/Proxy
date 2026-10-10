@@ -1,5 +1,5 @@
 #Config version (do not update)
-version: "1.11.1"
+version: "1.13.0-SNAPSHOT"
 
 #Bot token
 token: "insert token here"
@@ -63,6 +63,11 @@ role_syncing:
   give: [ ]
 
 
+#API Configuration
+api:
+  enabled: true
+  port: 61101
+
 #Database login
 host: localhost
 port: 3306
@@ -82,3 +87,6 @@ tab:
 
 #Discord user activity playing status (your server name or IP)
 DiscordPlaying: "server.net"
+
+progress_map: "https://progress.buildtheuk.org"
+website: "https://btuk.org"
