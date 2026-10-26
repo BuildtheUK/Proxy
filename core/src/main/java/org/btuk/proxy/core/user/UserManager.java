@@ -538,11 +538,11 @@ public class UserManager {
         user.saveAutoModFlags();
 
         chatHandler.handle(userRemoveEvent);
+        Optional<OnlineUser> optionalOnlineUser = coreUserManager.getOnlineUsers().stream().filter(onlineUser -> onlineUser.getUuid().equals(user.getUuid())).findFirst();
+        optionalOnlineUser.ifPresent(coreUserManager::removeOnlineUser);
         if (!shutdown) {
             log.info(String.format("Removed user %s from the proxy, they have been offline for more than 5 minutes", user.getName()));
         } else {
-            Optional<OnlineUser> optionalOnlineUser = coreUserManager.getOnlineUsers().stream().filter(onlineUser -> onlineUser.getUuid().equals(user.getUuid())).findFirst();
-            optionalOnlineUser.ifPresent(coreUserManager::removeOnlineUser);
             chatHandler.handle(new OnlineUserRemove(user.getUuid()));
             log.info(String.format("Removed user %s from the proxy due to shutdown", user.getName()));
         }

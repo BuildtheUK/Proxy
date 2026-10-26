@@ -7,6 +7,8 @@ import org.btuk.proxy.player.ProxyPlayer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.btuk.proxy.core.player.Player;
@@ -37,9 +39,12 @@ public class ProxyServer implements Server {
     @Override
     public boolean canPing() {
         try {
-            server.ping().get();
+            server.ping().get(3, TimeUnit.SECONDS);
             return true;
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (TimeoutException | ExecutionException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return false;
         }
     }

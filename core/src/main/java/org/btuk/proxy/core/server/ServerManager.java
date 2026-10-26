@@ -48,7 +48,7 @@ public class ServerManager {
         this.userManager = userManager;
 
         // Ping all servers every 10 seconds.
-        scheduler.createRepeatingTask(this::pingServers, 0L, 10L, TimeUnit.SECONDS);
+        scheduler.createRepeatingTask(this::pingServers, 10L, 10L, TimeUnit.SECONDS);
     }
 
     /**
