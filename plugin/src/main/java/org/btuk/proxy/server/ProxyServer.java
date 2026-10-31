@@ -4,8 +4,10 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import lombok.Getter;
 import org.btuk.proxy.player.ProxyPlayer;
 
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -20,7 +22,7 @@ public class ProxyServer implements Server {
     @Getter
     private final RegisteredServer server;
 
-    private long lastPing = Time.currentTime();
+    private volatile long lastPing = Time.currentTime();
 
     public ProxyServer(RegisteredServer server) {
         this.server = server;
@@ -62,5 +64,10 @@ public class ProxyServer implements Server {
     @Override
     public boolean equals(Object other) {
         return other instanceof ProxyServer && ((ProxyServer) other).server.equals(server);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(server);
     }
 }

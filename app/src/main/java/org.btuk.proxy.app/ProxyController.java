@@ -67,6 +67,8 @@ public class ProxyController {
 
     private CoreServerManager coreServerManager;
 
+    private ServerManager serverManager;
+
     private Analytics analytics;
 
     private Discord discord;
@@ -122,7 +124,7 @@ public class ProxyController {
         this.userManager = new UserManager(coreUserManager, chatHandler, tabManager, globalSQL, plotSQL, regionSQL, coreServerManager, scheduler, chatManager, playerManager,
                 analytics, discord, automod);
 
-        ServerManager serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
+        this.serverManager = new ServerManager(coreServerManager, scheduler, globalSQL, chatHandler, tabManager, coreUserManager, userManager);
 
         // Set up the review status message.
         new ReviewStatus(config, globalSQL, plotSQL, regionSQL, discord, scheduler);
@@ -201,6 +203,10 @@ public class ProxyController {
 
             if (userManager != null) {
                 userManager.removeAllUsers();
+            }
+
+            if (serverManager != null) {
+                serverManager.shutdown();
             }
 
             if (coreServerManager != null) {

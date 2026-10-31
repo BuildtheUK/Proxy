@@ -8,12 +8,9 @@ import org.btuk.proxy.database.sql.GlobalSQL;
 import org.btuk.proxy.core.server.CoreServerManager;
 import org.btuk.proxy.core.server.Server;
 
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -32,7 +29,7 @@ public class ProxyCoreServerManager implements CoreServerManager {
     public ProxyCoreServerManager(GlobalSQL globalSQL, Proxy proxy) {
         this.globalSQL = globalSQL;
         this.proxy = proxy;
-        servers = Collections.synchronizedSet(new HashSet<>());
+        servers = ConcurrentHashMap.newKeySet();
     }
 
     /**

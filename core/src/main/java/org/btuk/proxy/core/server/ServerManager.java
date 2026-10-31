@@ -55,7 +55,7 @@ public class ServerManager {
      * Add all online servers, since it is possible servers are already available on Proxy start.
      */
     public void initOnlineServers() {
-        coreServerManager.getOnlineServers().forEach(server -> threadExecutor.submit(() -> addServerIfOnline(server)));
+        coreServerManager.getOnlineServers().forEach(server -> threadExecutor.submit(() -> addServerIfOnline(server, 0, false)));
     }
 
     public void addServer(ServerStartup serverStartup) {
@@ -66,7 +66,7 @@ public class ServerManager {
 
         try {
             Server server = coreServerManager.createServer(serverName);
-            threadExecutor.submit(() -> addServerIfOnline(server));
+            threadExecutor.submit(() -> addServerIfOnline(server, 0, true));
         } catch (RuntimeException e) {
             log.warning("Unable to add server " + serverName + ", it can not be found.");
         }
@@ -77,10 +77,10 @@ public class ServerManager {
     }
 
     private void addServerIfOnline(Server server) {
-        addServerIfOnline(server, 0);
+        addServerIfOnline(server, 0, true);
     }
 
-    private void addServerIfOnline(Server server, int attempt) {
+    private void addServerIfOnline(Server server, int attempt, boolean retry) {
         // Skip if the server is already added.
         if (coreServerManager.getServers().stream().anyMatch(s -> s.getName().equals(server.getName()))) {
             return;
@@ -98,10 +98,10 @@ public class ServerManager {
                 log.severe("Failed to send online users to server " + server.getName() + ": " + e.getMessage());
             }
             tabManager.sendAddTeam();
-        } else {
+        } else if (retry) {
             // The server is not online.
             if (attempt < 30) {
-                scheduler.createDelayedTask(() -> threadExecutor.submit(() -> addServerIfOnline(server, attempt + 1)), 1, TimeUnit.SECONDS);
+                scheduler.createDelayedTask(() -> threadExecutor.submit(() -> addServerIfOnline(server, attempt + 1, true)), 1, TimeUnit.SECONDS);
             } else {
                 log.warning(String.format("Server " + server.getName() + " is not online."));
             }
@@ -148,5 +148,9 @@ public class ServerManager {
         if (server.canPing()) {
             server.setLastPing(Time.currentTime());
         }
+    }
+
+    public void shutdown() {
+        threadExecutor.shutdown();
     }
 }
